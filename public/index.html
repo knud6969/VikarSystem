@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VikarSystem - Vikarstyring for Folkeskoler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+
+    .tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 2px solid #e9ecef;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      color: #495057;
+      transition: all 0.3s;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab:hover {
+      background: #e9ecef;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: white;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 30px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.8em;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 10px;
+    }
+
+    h3 {
+      color: #495057;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #495057;
+      font-weight: 600;
+    }
+
+    select, input[type="date"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 6px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+
+    select:focus, input[type="date"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    button.success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .list {
+      list-style: none;
+    }
+
+    .list-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.2s;
+    }
+
+    .list-item:hover {
+      transform: translateX(5px);
+      background: #e9ecef;
+    }
+
+    .list-item-info {
+      flex: 1;
+    }
+
+    .list-item-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    th {
+      background: #f8f9fa;
+      color: #495057;
+      font-weight: 600;
+    }
+
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .badge.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge.warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .message {
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+    }
+
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📚 VikarSystem</h1>
+      <p class="subtitle">System til afdækning af vikarer til folkeskoler</p>
+    </header>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('vikar')">👤 Vikar Panel</div>
+      <div class="tab" onclick="showTab('admin')">⚙️ Admin Panel</div>
+    </div>
+
+    <!-- VIKAR TAB -->
+    <div id="vikar-tab" class="tab-content active">
+      <div class="section">
+        <h2>Vikar Panel</h2>
+        <p style="color: #6c757d; margin-bottom: 20px;">Som vikar kan du her markere de dage du er utilgængelig.</p>
+
+        <div id="vikar-message" class="message"></div>
+
+        <div class="form-group">
+          <label for="vikar-select">Vælg vikar:</label>
+          <select id="vikar-select" onchange="loadVikarUnavailability()">
+            <option value="">Vælg en vikar...</option>
+          </select>
+        </div>
+
+        <div id="vikar-form" style="display: none;">
+          <h3>Tilføj utilgængelig dato</h3>
+          <div class="form-group">
+            <label for="unavailable-date">Dato:</label>
+            <input type="date" id="unavailable-date">
+          </div>
+          <button onclick="markUnavailable()">Tilføj utilgængelig dato</button>
+
+          <h3 style="margin-top: 30px;">Mine utilgængelige dage</h3>
+          <ul id="unavailable-list" class="list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN TAB -->
+    <div id="admin-tab" class="tab-content">
+      <div class="section">
+        <h2>Admin Panel</h2>
+        <p style="color: #6c757d; margin-bottom: 20px;">Som administrator kan du sygemelde lærere, se ledige vikarer og dække vagter.</p>
+
+        <div id="admin-message" class="message"></div>
+
+        <div class="grid">
+          <div class="card">
+            <h3>Sygemeld lærer</h3>
+            <div class="form-group">
+              <label for="teacher-select">Lærer:</label>
+              <select id="teacher-select">
+                <option value="">Vælg en lærer...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sick-date">Dato:</label>
+              <input type="date" id="sick-date">
+            </div>
+            <button onclick="markTeacherSick()">Sygemeld lærer</button>
+          </div>
+
+          <div class="card">
+            <h3>Se ledige vikarer</h3>
+            <div class="form-group">
+              <label for="check-date">Vælg dato:</label>
+              <input type="date" id="check-date">
+            </div>
+            <button onclick="checkAvailableSubstitutes()">Tjek ledige vikarer</button>
+            <div id="available-subs" style="margin-top: 15px;"></div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 30px;">Sygemeldinger</h3>
+        <table id="sick-leave-table">
+          <thead>
+            <tr>
+              <th>Dato</th>
+              <th>Lærer</th>
+              <th>Fag</th>
+              <th>Status</th>
+              <th>Vikar</th>
+              <th>Handlinger</th>
+            </tr>
+          </thead>
+          <tbody id="sick-leave-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    // Tab switching
+    function showTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tabName + '-tab').classList.add('active');
+
+      if (tabName === 'vikar') {
+        loadVikarer();
+      } else if (tabName === 'admin') {
+        loadTeachers();
+        loadSickLeave();
+      }
+    }
+
+    // Show message
+    function showMessage(elementId, text, type) {
+      const msg = document.getElementById(elementId);
+      msg.textContent = text;
+      msg.className = `message ${type}`;
+      msg.style.display = 'block';
+      setTimeout(() => {
+        msg.style.display = 'none';
+      }, 5000);
+    }
+
+    // ===== VIKAR FUNCTIONS =====
+
+    async function loadVikarer() {
+      try {
+        const response = await fetch(`${API_BASE}/api/vikarer`);
+        const vikarer = await response.json();
+        
+        const select = document.getElementById('vikar-select');
+        select.innerHTML = '<option value="">Vælg en vikar...</option>';
+        
+        vikarer.forEach(vikar => {
+          const option = document.createElement('option');
+          option.value = vikar.id;
+          option.textContent = `${vikar.navn} (${vikar.email})`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Fejl ved indlæsning af vikarer:', error);
+      }
+    }
+
+    async function loadVikarUnavailability() {
+      const vikarId = document.getElementById('vikar-select').value;
+      const formDiv = document.getElementById('vikar-form');
+      
+      if (!vikarId) {
+        formDiv.style.display = 'none';
+        return;
+      }
+      
+      formDiv.style.display = 'block';
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/vikarer/${vikarId}/utilgaengelig`);
+        const unavailability = await response.json();
+        
+        const list = document.getElementById('unavailable-list');
+        list.innerHTML = '';
+        
+        if (unavailability.length === 0) {
+          list.innerHTML = '<li class="empty-state">Ingen utilgængelige dage registreret</li>';
+        } else {
+          unavailability.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'list-item';
+            li.innerHTML = `
+              <div class="list-item-info">
+                <strong>${formatDate(item.dato)}</strong>
+              </div>
+              <div class="list-item-actions">
+                <button class="danger" onclick="removeUnavailability('${item.dato}')">Fjern</button>
+              </div>
+            `;
+            list.appendChild(li);
+          });
+        }
+      } catch (error) {
+        console.error('Fejl ved indlæsning af utilgængelighed:', error);
+      }
+    }
+
+    async function markUnavailable() {
+      const vikarId = document.getElementById('vikar-select').value;
+      const date = document.getElementById('unavailable-date').value;
+      
+      if (!vikarId || !date) {
+        showMessage('vikar-message', 'Vælg en dato', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/vikarer/${vikarId}/utilgaengelig`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dato: date })
+        });
+        
+        if (response.ok) {
+          showMessage('vikar-message', 'Dato markeret som utilgængelig', 'success');
+          document.getElementById('unavailable-date').value = '';
+          loadVikarUnavailability();
+        } else {
+          const error = await response.json();
+          showMessage('vikar-message', error.error, 'error');
+        }
+      } catch (error) {
+        showMessage('vikar-message', 'Fejl ved tilføjelse af dato', 'error');
+      }
+    }
+
+    async function removeUnavailability(date) {
+      const vikarId = document.getElementById('vikar-select').value;
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/vikarer/${vikarId}/utilgaengelig/${date}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          showMessage('vikar-message', 'Dato fjernet fra utilgængelighed', 'success');
+          loadVikarUnavailability();
+        } else {
+          showMessage('vikar-message', 'Fejl ved fjernelse af dato', 'error');
+        }
+      } catch (error) {
+        showMessage('vikar-message', 'Fejl ved fjernelse af dato', 'error');
+      }
+    }
+
+    // ===== ADMIN FUNCTIONS =====
+
+    async function loadTeachers() {
+      try {
+        const response = await fetch(`${API_BASE}/api/laerere`);
+        const teachers = await response.json();
+        
+        const select = document.getElementById('teacher-select');
+        select.innerHTML = '<option value="">Vælg en lærer...</option>';
+        
+        teachers.forEach(teacher => {
+          const option = document.createElement('option');
+          option.value = teacher.id;
+          option.textContent = `${teacher.navn} - ${teacher.fag}`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Fejl ved indlæsning af lærere:', error);
+      }
+    }
+
+    async function markTeacherSick() {
+      const teacherId = document.getElementById('teacher-select').value;
+      const date = document.getElementById('sick-date').value;
+      
+      if (!teacherId || !date) {
+        showMessage('admin-message', 'Vælg lærer og dato', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/sygdom`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ laerer_id: teacherId, dato: date })
+        });
+        
+        if (response.ok) {
+          showMessage('admin-message', 'Lærer sygemeldt', 'success');
+          document.getElementById('sick-date').value = '';
+          loadSickLeave();
+        } else {
+          const error = await response.json();
+          showMessage('admin-message', error.error, 'error');
+        }
+      } catch (error) {
+        showMessage('admin-message', 'Fejl ved sygemelding', 'error');
+      }
+    }
+
+    async function loadSickLeave() {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/sygdom`);
+        const sickLeave = await response.json();
+        
+        const tbody = document.getElementById('sick-leave-body');
+        tbody.innerHTML = '';
+        
+        if (sickLeave.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Ingen sygemeldinger</td></tr>';
+        } else {
+          sickLeave.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${formatDate(item.dato)}</td>
+              <td>${item.laerer_navn}</td>
+              <td>${item.fag}</td>
+              <td>
+                ${item.dækket ? 
+                  '<span class="badge success">Dækket</span>' : 
+                  '<span class="badge warning">Ikke dækket</span>'}
+              </td>
+              <td>${item.vikar_navn || '-'}</td>
+              <td>
+                ${item.dækket ? 
+                  `<button class="danger" onclick="removeSubstitute(${item.id})">Fjern vikar</button>` :
+                  `<button class="success" onclick="showAssignSubstitute(${item.id}, '${item.dato}')">Tildel vikar</button>`}
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (error) {
+        console.error('Fejl ved indlæsning af sygdom:', error);
+      }
+    }
+
+    async function checkAvailableSubstitutes() {
+      const date = document.getElementById('check-date').value;
+      
+      if (!date) {
+        showMessage('admin-message', 'Vælg en dato', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/ledige-vikarer/${date}`);
+        const vikarer = await response.json();
+        
+        const div = document.getElementById('available-subs');
+        
+        if (vikarer.length === 0) {
+          div.innerHTML = '<p style="color: #6c757d; margin-top: 10px;">Ingen ledige vikarer denne dag</p>';
+        } else {
+          div.innerHTML = '<ul class="list" style="margin: 0;">' + 
+            vikarer.map(v => `
+              <li class="list-item">
+                <div class="list-item-info">
+                  <strong>${v.navn}</strong><br>
+                  <small>${v.email} | ${v.telefon}</small>
+                </div>
+              </li>
+            `).join('') +
+            '</ul>';
+        }
+      } catch (error) {
+        showMessage('admin-message', 'Fejl ved hentning af vikarer', 'error');
+      }
+    }
+
+    async function showAssignSubstitute(sickId, date) {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/ledige-vikarer/${date}`);
+        const vikarer = await response.json();
+        
+        if (vikarer.length === 0) {
+          showMessage('admin-message', 'Ingen ledige vikarer denne dag', 'error');
+          return;
+        }
+        
+        const vikarId = prompt('Vælg vikar ID:\n' + 
+          vikarer.map(v => `${v.id}: ${v.navn} (${v.email})`).join('\n'));
+        
+        if (vikarId) {
+          await assignSubstitute(sickId, parseInt(vikarId));
+        }
+      } catch (error) {
+        showMessage('admin-message', 'Fejl ved tildeling af vikar', 'error');
+      }
+    }
+
+    async function assignSubstitute(sickId, vikarId) {
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/sygdom/${sickId}/daek`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vikar_id: vikarId })
+        });
+        
+        if (response.ok) {
+          showMessage('admin-message', 'Vikar tildelt', 'success');
+          loadSickLeave();
+        } else {
+          const error = await response.json();
+          showMessage('admin-message', error.error, 'error');
+        }
+      } catch (error) {
+        showMessage('admin-message', 'Fejl ved tildeling', 'error');
+      }
+    }
+
+    async function removeSubstitute(sickId) {
+      if (!confirm('Er du sikker på at du vil fjerne vikaren?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/admin/sygdom/${sickId}/fjern-vikar`, {
+          method: 'PUT'
+        });
+        
+        if (response.ok) {
+          showMessage('admin-message', 'Vikar fjernet', 'success');
+          loadSickLeave();
+        } else {
+          showMessage('admin-message', 'Fejl ved fjernelse af vikar', 'error');
+        }
+      } catch (error) {
+        showMessage('admin-message', 'Fejl ved fjernelse', 'error');
+      }
+    }
+
+    // Utility functions
+    function formatDate(dateString) {
+      const date = new Date(dateString + 'T00:00:00');
+      return date.toLocaleDateString('da-DK', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    // Initialize
+    loadVikarer();
+  </script>
+</body>
+</html>
