@@ -69,7 +69,7 @@ Systemet indeholder følgende eksempeldata ved opstart:
 - `GET /api/admin/sygdom` - Hent alle sygemeldinger
 - `POST /api/admin/sygdom` - Sygemeld lærer (body: {laerer_id, dato})
 - `GET /api/admin/ledige-vikarer/:dato` - Hent ledige vikarer for en dato
-- `PUT /api/admin/sygdom/:id/dæk` - Tildel vikar (body: {vikar_id})
+- `PUT /api/admin/sygdom/:id/daek` - Tildel vikar (body: {vikar_id})
 - `PUT /api/admin/sygdom/:id/fjern-vikar` - Fjern vikar-tildeling
 
 ## Brugergrænseflade
