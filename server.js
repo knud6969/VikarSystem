@@ -2,14 +2,23 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'For mange forespørgsler fra denne IP, prøv igen senere.'
+});
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
+app.use('/api/', limiter); // Apply rate limiting to all API routes
 
 // ===== VIKAR ENDPOINTS =====
 
