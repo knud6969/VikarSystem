@@ -1,0 +1,19 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    // Proxy API-kald til backend under udvikling
+    proxy: {
+      '/auth':            'http://localhost:3000',
+      '/laerere':         'http://localhost:3000',
+      '/vikarer':         'http://localhost:3000',
+      '/lektioner':       'http://localhost:3000',
+      '/fravaer':         'http://localhost:3000',
+      '/tildelinger':     'http://localhost:3000',
+      '/tilgaengelighed': 'http://localhost:3000',
+    },
+  },
+});
