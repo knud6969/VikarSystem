@@ -2,11 +2,11 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  user: 'knudaundal',      // dit mac username
-  host: 'localhost',
-  database: 'vikarsystem',
-  password: '6tfghy6TF',            // ofte tom på local Mac
-  port: 5432,
+  user:     process.env.DB_USER,
+  host:     process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port:     process.env.DB_PORT || 5432,
 });
 
 pool.on('error', (err) => {
