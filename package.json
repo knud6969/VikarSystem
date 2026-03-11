@@ -2,17 +2,20 @@
   "name": "vikarsystem",
   "version": "1.0.0",
   "description": "System til afdækning af vikarer til folkeskoler",
-  "main": "db.js",
+  "main": "backend/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   }
 }
