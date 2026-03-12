@@ -4,10 +4,8 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import AdminKalenderPage from './pages/AdminKalenderPage';
+import AdminLaererePage from './pages/AdminLaererePage';
 import {
-  AdminTildelingerPage,
-  AdminLektionerPage,
-  AdminLaererePage,
   AdminVikarePage,
   VikarLektionerPage,
   VikarTilgaengelighedPage,
@@ -19,11 +17,9 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Offentlig rute */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/uautoriseret" element={<UautorisPage />} />
 
-          {/* Admin-ruter */}
           <Route
             path="/admin"
             element={
@@ -33,14 +29,11 @@ export default function App() {
             }
           >
             <Route index element={<Navigate to="kalender" replace />} />
-            <Route path="kalender"    element={<AdminKalenderPage />} />
-            <Route path="tildelinger" element={<AdminTildelingerPage />} />
-            <Route path="lektioner"   element={<AdminLektionerPage />} />
-            <Route path="laerere"     element={<AdminLaererePage />} />
-            <Route path="vikarer"     element={<AdminVikarePage />} />
+            <Route path="kalender" element={<AdminKalenderPage />} />
+            <Route path="laerere"  element={<AdminLaererePage />} />
+            <Route path="vikarer"  element={<AdminVikarePage />} />
           </Route>
 
-          {/* Vikar-ruter */}
           <Route
             path="/vikar"
             element={
@@ -54,7 +47,6 @@ export default function App() {
             <Route path="tilgaengelighed" element={<VikarTilgaengelighedPage />} />
           </Route>
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

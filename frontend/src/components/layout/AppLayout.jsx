@@ -2,10 +2,9 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_LINKS = [
-  { to: '/admin/kalender',    label: 'Kalender' },
-  { to: '/admin/lektioner',   label: 'Lektioner' },
-  { to: '/admin/laerere',     label: 'Lærere' },
-  { to: '/admin/vikarer',     label: 'Vikarer' },
+  { to: '/admin/kalender', label: 'Kalender' },
+  { to: '/admin/laerere',  label: 'Lærere' },
+  { to: '/admin/vikarer',  label: 'Vikarer' },
 ];
 
 const VIKAR_LINKS = [
