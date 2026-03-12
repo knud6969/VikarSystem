@@ -4,9 +4,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import AdminKalenderPage from './pages/AdminKalenderPage';
-import AdminLaererePage from './pages/AdminLaererePage';
 import {
-  AdminVikarePage,
   VikarLektionerPage,
   VikarTilgaengelighedPage,
   UautorisPage,
@@ -30,8 +28,6 @@ export default function App() {
           >
             <Route index element={<Navigate to="kalender" replace />} />
             <Route path="kalender" element={<AdminKalenderPage />} />
-            <Route path="laerere"  element={<AdminLaererePage />} />
-            <Route path="vikarer"  element={<AdminVikarePage />} />
           </Route>
 
           <Route

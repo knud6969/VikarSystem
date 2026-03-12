@@ -3,12 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_LINKS = [
   { to: '/admin/kalender', label: 'Kalender' },
-  { to: '/admin/laerere',  label: 'Lærere' },
-  { to: '/admin/vikarer',  label: 'Vikarer' },
 ];
 
 const VIKAR_LINKS = [
-  { to: '/vikar/lektioner',       label: 'Mine lektioner' },
+  { to: '/vikar/lektioner',       label: 'Mine lektioner'     },
   { to: '/vikar/tilgaengelighed', label: 'Min tilgængelighed' },
 ];
 
@@ -18,15 +16,10 @@ export default function AppLayout() {
 
   const links = bruger?.rolle === 'admin' ? ADMIN_LINKS : VIKAR_LINKS;
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-full px-4 h-14 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-widest uppercase text-slate-800 select-none">
             Vikar<span className="text-blue-600">System</span>
           </span>
@@ -54,7 +47,7 @@ export default function AppLayout() {
               {bruger?.email} · <span className="capitalize">{bruger?.rolle}</span>
             </span>
             <button
-              onClick={handleLogout}
+              onClick={() => { logout(); navigate('/login'); }}
               className="text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
             >
               Log ud
@@ -63,7 +56,7 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="px-4 py-4">
         <Outlet />
       </main>
     </div>
