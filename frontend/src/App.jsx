@@ -3,8 +3,8 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import AdminKalenderPage from './pages/AdminKalenderPage';
 import {
-  AdminFravaerPage,
   AdminTildelingerPage,
   AdminLektionerPage,
   AdminLaererePage,
@@ -14,11 +14,6 @@ import {
   UautorisPage,
 } from './pages/PlaceholderPages';
 
-/**
- * App.jsx definerer udelukkende routing og providers.
- * Al forretningslogik ligger i services og hooks.
- * Al præsentation ligger i pages og components.
- */
 export default function App() {
   return (
     <AuthProvider>
@@ -37,8 +32,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="fravaer" replace />} />
-            <Route path="fravaer"     element={<AdminFravaerPage />} />
+            <Route index element={<Navigate to="kalender" replace />} />
+            <Route path="kalender"    element={<AdminKalenderPage />} />
             <Route path="tildelinger" element={<AdminTildelingerPage />} />
             <Route path="lektioner"   element={<AdminLektionerPage />} />
             <Route path="laerere"     element={<AdminLaererePage />} />

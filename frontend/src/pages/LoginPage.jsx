@@ -2,11 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-/**
- * Login-side.
- * Presenter-laget: håndterer formular-state og delegerer login-logik til AuthContext.
- * Omdirigerer til korrekt dashboard baseret på brugerens rolle.
- */
 export default function LoginPage() {
   const { login }   = useAuth();
   const navigate    = useNavigate();
@@ -23,7 +18,7 @@ export default function LoginPage() {
 
     try {
       const bruger = await login(email, password);
-      navigate(bruger.rolle === 'admin' ? '/admin/fravaer' : '/vikar/lektioner', { replace: true });
+      navigate(bruger.rolle === 'admin' ? '/admin/kalender' : '/vikar/lektioner', { replace: true });
     } catch (err) {
       setFejl(err.message || 'Login mislykkedes');
     } finally {
@@ -34,7 +29,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
             Vikar<span className="text-blue-600">System</span>
@@ -44,7 +38,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Kortboks */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
@@ -79,7 +72,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Fejlbesked */}
             {fejl && (
               <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
                 {fejl}

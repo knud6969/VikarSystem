@@ -2,23 +2,17 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_LINKS = [
-  { to: '/admin/fravaer',     label: 'Fravær' },
-  { to: '/admin/tildelinger', label: 'Tildelinger' },
+  { to: '/admin/kalender',    label: 'Kalender' },
   { to: '/admin/lektioner',   label: 'Lektioner' },
   { to: '/admin/laerere',     label: 'Lærere' },
   { to: '/admin/vikarer',     label: 'Vikarer' },
 ];
 
 const VIKAR_LINKS = [
-  { to: '/vikar/lektioner',      label: 'Mine lektioner' },
+  { to: '/vikar/lektioner',       label: 'Mine lektioner' },
   { to: '/vikar/tilgaengelighed', label: 'Min tilgængelighed' },
 ];
 
-/**
- * Fælles app-skallen med top-navigation.
- * Viser forskellige links afhængigt af brugerens rolle.
- * Indhold renderes via <Outlet />.
- */
 export default function AppLayout() {
   const { bruger, logout } = useAuth();
   const navigate = useNavigate();
@@ -32,15 +26,12 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Top navigation */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          {/* Logo */}
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-widest uppercase text-slate-800 select-none">
             Vikar<span className="text-blue-600">System</span>
           </span>
 
-          {/* Nav links */}
           <nav className="hidden md:flex items-center gap-1">
             {links.map(({ to, label }) => (
               <NavLink
@@ -59,7 +50,6 @@ export default function AppLayout() {
             ))}
           </nav>
 
-          {/* Bruger + logout */}
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 hidden sm:block">
               {bruger?.email} · <span className="capitalize">{bruger?.rolle}</span>
@@ -74,8 +64,7 @@ export default function AppLayout() {
         </div>
       </header>
 
-      {/* Sideindhold */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         <Outlet />
       </main>
     </div>
