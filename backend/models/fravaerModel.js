@@ -22,17 +22,11 @@ const FravaerModel = {
     return result.rows[0] || null;
   },
 
-  /**
-   * Opretter fravær og markerer relevante lektioner som 'udækket'.
-   * Kører i én transaktion så det enten lykkes helt eller slet ikke.
-   * (User Story 1 + 2)
-   */
   async opretMedLektioner({ teacher_id, type, start_date, end_date, oprettet_af }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Opret fravær
       const fravaerRes = await client.query(`
         INSERT INTO fravaer (teacher_id, type, start_date, end_date, oprettet_af)
         VALUES ($1, $2, $3, $4, $5)
@@ -41,20 +35,18 @@ const FravaerModel = {
 
       const fravaer = fravaerRes.rows[0];
 
-      // Opdater lærerens status
       await client.query(
-        "UPDATE laerere SET status = $1 WHERE id = $2",
+        'UPDATE laerere SET status = $1 WHERE id = $2',
         [type === 'syg' ? 'syg' : 'fraværende', teacher_id]
       );
 
-      // Markér lektioner som udækkede
       const lektionerRes = await client.query(`
         UPDATE lektioner
         SET status = 'udækket'
-        WHERE teacher_id  = $1
+        WHERE teacher_id        = $1
           AND DATE(start_time) >= $2
           AND DATE(start_time) <= $3
-          AND status = 'normal'
+          AND status            = 'normal'
         RETURNING id
       `, [teacher_id, start_date, end_date]);
 
@@ -72,16 +64,11 @@ const FravaerModel = {
     }
   },
 
-  /**
-   * Afslutter fravær (raskmelding) og normaliserer fremtidige lektioner.
-   * (User Story 5)
-   */
   async afslutMedLektioner(id, { bevarTildelinger = false }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Hent fravær for at kende teacher_id
       const fravaerRes = await client.query(
         'SELECT * FROM fravaer WHERE id = $1',
         [id]
@@ -89,29 +76,28 @@ const FravaerModel = {
       const fravaer = fravaerRes.rows[0];
       if (!fravaer) throw new Error('Fravær ikke fundet');
 
-      // Sæt slut_dato til i dag
+      // end_date = i går, så læreren ikke fremstår fraværende resten af i dag
       await client.query(
-        'UPDATE fravaer SET end_date = CURRENT_DATE WHERE id = $1',
+        'UPDATE fravaer SET end_date = CURRENT_DATE - 1 WHERE id = $1',
         [id]
       );
 
-      // Sæt lærer aktiv igen
       await client.query(
         "UPDATE laerere SET status = 'aktiv' WHERE id = $1",
         [fravaer.teacher_id]
       );
 
-      // Normalisér fremtidige udækkede lektioner
+      // DATE(start_time) >= CURRENT_DATE normaliserer også lektioner
+      // der allerede er startet i dag (ikke kun fremtidige)
       const lektionerRes = await client.query(`
         UPDATE lektioner
         SET status = 'normal'
-        WHERE teacher_id = $1
-          AND start_time > NOW()
-          AND status = 'udækket'
+        WHERE teacher_id         = $1
+          AND DATE(start_time)  >= CURRENT_DATE
+          AND status             = 'udækket'
         RETURNING id
       `, [fravaer.teacher_id]);
 
-      // Fjern evt. tildelinger på normaliserede lektioner hvis ønsket
       if (!bevarTildelinger && lektionerRes.rows.length > 0) {
         const ids = lektionerRes.rows.map(r => r.id);
         await client.query(

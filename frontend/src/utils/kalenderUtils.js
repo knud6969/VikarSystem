@@ -2,6 +2,15 @@ export const TIMER_START = 0;
 export const TIMER_SLUT  = 24;
 export const DAGE = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 
+/**
+ * Konverterer en Date til YYYY-MM-DD streng i LOKAL tid.
+ * Brug denne i stedet for toISOString().slice(0,10) som returnerer UTC-dato
+ * og dermed kan give forkert dato i Danmark (UTC+1/+2).
+ */
+export function dagTilStreng(dato) {
+  return dato.toLocaleDateString('sv-SE');
+}
+
 export function getMandagForUge(dato = new Date()) {
   const d = new Date(dato);
   const dag = d.getDay();
@@ -40,14 +49,14 @@ export function beregnPosition(startTime, endTime, timePx = 64) {
 }
 
 export function lektionerForDag(lektioner, dato) {
-  const dagStr = dato.toISOString().slice(0, 10);
+  const dagStr = dagTilStreng(dato);
   return lektioner.filter(l =>
-    new Date(l.start_time).toISOString().slice(0, 10) === dagStr
+    dagTilStreng(new Date(l.start_time)) === dagStr
   );
 }
 
 export function fravaerForDag(fravaer, dato) {
-  const dagStr = dato.toISOString().slice(0, 10);
+  const dagStr = dagTilStreng(dato);
   return fravaer.filter(f => f.start_date <= dagStr && f.end_date >= dagStr);
 }
 

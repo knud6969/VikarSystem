@@ -10,6 +10,7 @@ import {
   formatDagLabel,
   beregnPosition,
   getUgenummer,
+  dagTilStreng,
   statusFarve,
   TIMER_START,
   TIMER_SLUT,
@@ -90,7 +91,7 @@ export default function AdminKalenderPage() {
 
   const ugedage  = getUgedage(mandag);
   const ugeNr    = getUgenummer(mandag);
-  const idagStr  = new Date().toISOString().slice(0, 10);
+  const idagStr  = dagTilStreng(new Date()); // lokal dato, ikke UTC
 
   // Når alleLaerere opdateres (efter sygemelding/raskmelding),
   // og PersonModal er åben — opdater activPerson med ny status
@@ -151,7 +152,7 @@ export default function AdminKalenderPage() {
   const totalGridW = gitterKolonner.length * colW;
 
   // Fravær for valgt dag (normal) eller alle dage (ugeoversigt håndteres per kolonne)
-  const valgtDagStr = ugedage[valgtDagIdx]?.toISOString().slice(0, 10);
+  const valgtDagStr = ugedage[valgtDagIdx] ? dagTilStreng(ugedage[valgtDagIdx]) : null;
   const dagFravaer  = fravaer.filter(f => f.start_date <= valgtDagStr && f.end_date >= valgtDagStr);
 
   // ── Navigation ────────────────────────────────────────────
@@ -222,7 +223,7 @@ export default function AdminKalenderPage() {
       const s = new Date(lektion.start_time), e = new Date(lektion.end_time);
       const fmt = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
       setVikarListe(await vikarService.getLedige(
-        s.toISOString().slice(0, 10), fmt(s), fmt(e)
+        dagTilStreng(s), fmt(s), fmt(e)
       ));
     } catch (err) {
       setActionFejl(err.message);
@@ -320,7 +321,7 @@ export default function AdminKalenderPage() {
                   }`}
                 >
                   <span className="hidden sm:inline">{DAGE[i].slice(0, 3)} </span>
-                  <span className={dag.toISOString().slice(0,10) === idagStr ? 'text-blue-600 font-bold' : ''}>
+                  <span className={dagTilStreng(dag) === idagStr ? 'text-blue-600 font-bold' : ''}>
                     {formatDagLabel(dag)}
                   </span>
                 </button>
@@ -403,7 +404,7 @@ export default function AdminKalenderPage() {
               {erUgeOversigt
                 /* Ugeoversigt: dag-kolonner */
                 ? ugedage.map((dag, i) => {
-                    const dagStr = dag.toISOString().slice(0, 10);
+                    const dagStr = dagTilStreng(dag);
                     const erIdag = dagStr === idagStr;
                     const dagFravaerUge = fravaer.filter(f => f.start_date <= dagStr && f.end_date >= dagStr && f.teacher_id === ugePerson.id);
 
@@ -472,9 +473,9 @@ export default function AdminKalenderPage() {
                 {erUgeOversigt
                   /* Ugeoversigt: én kolonne per dag */
                   ? ugedage.map((dag, i) => {
-                      const dagStr        = dag.toISOString().slice(0, 10);
+                      const dagStr        = dagTilStreng(dag);
                       const dagLektioner  = lektioner.filter(l =>
-                        new Date(l.start_time).toISOString().slice(0, 10) === dagStr &&
+                        dagTilStreng(new Date(l.start_time)) === dagStr &&
                         (ugePerson.type === 'laerer'
                           ? l.teacher_id === ugePerson.id
                           : tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === ugePerson.id))
@@ -496,14 +497,14 @@ export default function AdminKalenderPage() {
                     })
                   /* Normal: én kolonne per person */
                   : gitterKolonner.map(({ person, dag }) => {
-                      const dagStr       = dag.toISOString().slice(0, 10);
+                      const dagStr       = dagTilStreng(dag);
                       const dagLektioner = lektioner.filter(l => {
-                        const lDagStr = new Date(l.start_time).toISOString().slice(0, 10);
+                        const lDagStr = dagTilStreng(new Date(l.start_time));
                         if (lDagStr !== dagStr) return false;
                         if (person.type === 'laerer') return l.teacher_id === person.id;
                         return tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === person.id);
                       });
-                      const erFravaer = person.type === 'laerer' && dagFravaer.some(f => f.teacher_id === person.id);
+                      const erFravaer = person.type === 'laerer' && person.status !== 'aktiv';
 
                       return (
                         <GitterKolonne
