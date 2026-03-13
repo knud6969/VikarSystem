@@ -39,6 +39,7 @@ tildelingRouter.delete('/:id',requireAuth, requireRolle('admin'), TildelingContr
 const tilgaengelighedRouter     = express.Router();
 const TilgaengelighedController = require('../controllers/tilgaengelighedController');
 
+tilgaengelighedRouter.get('/alle',   requireAuth, requireRolle('admin'), TilgaengelighedController.getAlle);
 tilgaengelighedRouter.get('/min',    requireAuth, requireRolle('vikar'), TilgaengelighedController.getMin);
 tilgaengelighedRouter.post('/',      requireAuth, requireRolle('vikar'), TilgaengelighedController.saet);
 tilgaengelighedRouter.delete('/:id', requireAuth, requireRolle('vikar'), TilgaengelighedController.delete);

@@ -41,6 +41,20 @@ const TilgaengelighedModel = {
     );
     return result.rowCount > 0;
   },
+  /**
+   * Henter al tilgængelighed med status 'optaget' — bruges af admin-kalenderen.
+   */
+  async getAlleOptaget() {
+    const result = await pool.query(`
+      SELECT t.*, v.name AS vikar_navn
+      FROM tilgaengelighed t
+      JOIN vikarer v ON v.id = t.substitute_id
+      WHERE t.status = 'optaget'
+        AND t.date >= CURRENT_DATE
+      ORDER BY t.date, t.start_time
+    `);
+    return result.rows;
+  },
 };
 
 module.exports = TilgaengelighedModel;

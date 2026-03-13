@@ -85,7 +85,7 @@ export default function AdminKalenderPage() {
   const timeColRef = useRef(null);
   const syncing    = useRef(false);
 
-  const { lektioner, fravaer, tildelinger, loading, error, refetch } = useKalender(mandag);
+  const { lektioner, fravaer, tildelinger, tilgaengelighed, loading, error, refetch } = useKalender(mandag);
   const { data: alleLaerere, refetch: refetchLaerere } = useApi(laererService.getAll, []);
   const { data: alleVikarer }                           = useApi(vikarService.getAll, []);
 
@@ -531,6 +531,9 @@ export default function AdminKalenderPage() {
                           lektioner={dagLektioner}
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
+                          dagOptaget={ugePerson.type === 'vikar'
+                            ? tilgaengelighed.filter(t => t.substitute_id === ugePerson.id && t.date === dagStr)
+                            : []}
                           onLektionKlik={(l) => aabneLektion(l, tildelinger.find(t => t.lesson_id === l.id))}
                         />
                       );
@@ -553,6 +556,9 @@ export default function AdminKalenderPage() {
                           lektioner={dagLektioner}
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
+                          dagOptaget={person.type === 'vikar'
+                            ? tilgaengelighed.filter(t => t.substitute_id === person.id && t.date === dagStr)
+                            : []}
                           onLektionKlik={(l) => aabneLektion(l, tildelinger.find(t => t.lesson_id === l.id))}
                         />
                       );
@@ -636,7 +642,7 @@ export default function AdminKalenderPage() {
 /* ────────────────────────────────────────────────────────────
  * GitterKolonne — én tidssøjle-kolonne i gitteret
  * ──────────────────────────────────────────────────────────── */
-function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, onLektionKlik }) {
+function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, dagOptaget = [], onLektionKlik }) {
   return (
     <div
       className={`relative border-r border-slate-200 last:border-r-0 shrink-0 ${erFravaer ? 'bg-red-50/30' : ''}`}
@@ -657,6 +663,27 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, onLektionKlik 
           style={{ top: (t - TIMER_START) * TIME_PX + TIME_PX / 2 }}
         />
       ))}
+
+      {/* Vikar utilgængeligheds-blokke */}
+      {dagOptaget.map(blok => {
+        const [sh, sm] = blok.start_time.slice(0,5).split(':').map(Number);
+        const [eh, em] = blok.end_time.slice(0,5).split(':').map(Number);
+        const startMin = (sh - TIMER_START) * 60 + sm;
+        const slutMin  = (eh - TIMER_START) * 60 + em;
+        const top    = (startMin / 60) * TIME_PX;
+        const height = Math.max(((slutMin - startMin) / 60) * TIME_PX, 16);
+        return (
+          <div key={blok.id}
+            className="absolute left-0.5 right-0.5 rounded-md z-5 overflow-hidden pointer-events-none"
+            style={{ top: top + 1, height: height - 2, backgroundColor: 'rgba(239,68,68,0.10)', border: '1px solid #FECACA' }}>
+            {height > 24 && (
+              <p className="text-xs text-red-400 px-1.5 pt-0.5 leading-tight truncate" style={{ fontSize: '9px' }}>
+                Utilgængelig{blok.kommentar ? ` · ${blok.kommentar}` : ''}
+              </p>
+            )}
+          </div>
+        );
+      })}
 
       {/* Lektioner */}
       {lektioner.map(lektion => {

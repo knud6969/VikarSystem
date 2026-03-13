@@ -18,6 +18,19 @@ const TilgaengelighedController = {
   },
 
   /**
+   * GET /tilgaengelighed/alle
+   * Admin henter alle vikarters utilgængeligheder til kalender-visning.
+   */
+  async getAlle(req, res) {
+    try {
+      res.json(await TilgaengelighedModel.getAlleOptaget());
+    } catch (err) {
+      console.error('TilgaengelighedController.getAlle:', err);
+      res.status(500).json({ error: 'Serverfejl' });
+    }
+  },
+
+  /**
    * POST /tilgaengelighed
    * Vikar sætter sin tilgængelighed. (User Story 6)
    */
@@ -26,17 +39,16 @@ const TilgaengelighedController = {
       const vikar = await VikarModel.getByUserId(req.bruger.id);
       if (!vikar) return res.status(404).json({ error: 'Vikar ikke fundet' });
 
-      const { date, start_time, end_time, status } = req.body;
+      const { date, start_time, end_time, status, kommentar } = req.body;
       if (!date || !start_time || !end_time) {
         return res.status(400).json({ error: 'date, start_time og end_time er påkrævet' });
       }
 
       const result = await TilgaengelighedModel.saet({
         substitute_id: vikar.id,
-        date,
-        start_time,
-        end_time,
+        date, start_time, end_time,
         status: status || 'ledig',
+        kommentar: kommentar || null,
       });
       res.status(201).json(result);
     } catch (err) {
