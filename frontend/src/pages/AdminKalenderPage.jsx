@@ -264,18 +264,21 @@ export default function AdminKalenderPage() {
     if (!valgtLektion) return;
     setActionLoading(true); setActionFejl('');
     try {
-      // Find alle udækkede lektioner for samme lærer samme dag
       const lektionsDag = dagTilStreng(new Date(valgtLektion.start_time));
       const alleUdaekket = lektioner.filter(l =>
         l.teacher_id === valgtLektion.teacher_id &&
         dagTilStreng(new Date(l.start_time)) === lektionsDag &&
         l.status === 'udækket'
       );
-      // Tildel én ad gangen — bruger eksisterende endpoint
+      // Optimistisk: opdater valgtLektion med det samme
+      setValgtLektion(prev => ({ ...prev, status: 'dækket' }));
+      // Tildel alle parallelt
       await Promise.all(alleUdaekket.map(l => tildelingService.tildel(l.id, vikarId)));
       await refetch();
       setValgtLektion(null);
     } catch (err) {
+      // Fortryd optimistisk opdatering ved fejl
+      setValgtLektion(prev => ({ ...prev, status: 'udækket' }));
       setActionFejl(err.message);
     } finally {
       setActionLoading(false);
@@ -571,6 +574,7 @@ export default function AdminKalenderPage() {
                 onLuk={() => setValgtLektion(null)}
                 onHentVikarer={() => hentLedigeVikarer(valgtLektion)}
                 onTildelVikar={tildelVikar}
+                onTildelAlle={tildelAlleIdag}
                 onFjernTildeling={fjernTildeling}
               />
             </div>
