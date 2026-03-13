@@ -5,6 +5,7 @@ const VikarController = require('../controllers/vikarController');
 const { requireAuth, requireRolle } = require('../middleware/authMiddleware');
 
 vikarRouter.get('/ledige', requireAuth, requireRolle('admin'), VikarController.getLedige);
+vikarRouter.get('/mig',    requireAuth, requireRolle('vikar'), VikarController.getMig);   // ← NY
 vikarRouter.get('/',       requireAuth, requireRolle('admin'), VikarController.getAll);
 vikarRouter.get('/:id',    requireAuth, VikarController.getById);
 
@@ -38,8 +39,8 @@ tildelingRouter.delete('/:id',requireAuth, requireRolle('admin'), TildelingContr
 const tilgaengelighedRouter     = express.Router();
 const TilgaengelighedController = require('../controllers/tilgaengelighedController');
 
-tilgaengelighedRouter.get('/min',  requireAuth, requireRolle('vikar'), TilgaengelighedController.getMin);
-tilgaengelighedRouter.post('/',    requireAuth, requireRolle('vikar'), TilgaengelighedController.saet);
+tilgaengelighedRouter.get('/min',    requireAuth, requireRolle('vikar'), TilgaengelighedController.getMin);
+tilgaengelighedRouter.post('/',      requireAuth, requireRolle('vikar'), TilgaengelighedController.saet);
 tilgaengelighedRouter.delete('/:id', requireAuth, requireRolle('vikar'), TilgaengelighedController.delete);
 
 module.exports = { vikarRouter, lektionRouter, fravaerRouter, tildelingRouter, tilgaengelighedRouter };

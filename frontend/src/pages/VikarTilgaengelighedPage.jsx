@@ -4,65 +4,46 @@ import { vikarService } from '../api/vikarService';
 import { tilgaengelighedService } from '../api/tilgaengelighedService';
 import { useApi } from '../hooks/useApi';
 import {
-  getMandagForUge,
-  getUgedage,
-  getUgenummer,
-  dagTilStreng,
-  TIMER_START,
-  TIMER_SLUT,
-  DAGE,
+  getMandagForUge, getUgedage, getUgenummer, dagTilStreng,
+  TIMER_START, TIMER_SLUT, DAGE,
 } from '../utils/kalenderUtils';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
 
 const TIME_PX    = 64;
 const COL_W      = 200;
 const TIME_COL_W = 48;
 const HEADER_H   = 72;
+const SNAP       = 15;
+const HANDLE_PX  = 10;
 const TIMER      = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
 
-// Snap til nærmeste 15 min
-function snapMinutter(minutter) {
-  return Math.round(minutter / 15) * 15;
-}
+function snap(min)     { return Math.round(min / SNAP) * SNAP; }
+function minToStr(min) { return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`; }
+function strToMin(s)   { const [h,m] = s.split(':').map(Number); return h*60+m; }
+function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+function yToMin(y)     { return snap(clamp((y/TIME_PX)*60 + TIMER_START*60, TIMER_START*60, TIMER_SLUT*60)); }
+function minToY(min)   { return ((min - TIMER_START*60)/60)*TIME_PX; }
 
-function minutterTilStreng(minutter) {
-  const t = Math.floor(minutter / 60);
-  const m = minutter % 60;
-  return `${String(t).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-function yTilMinutter(y, timePx) {
-  const totalMinutter = (y / timePx) * 60;
-  return snapMinutter(Math.max(0, totalMinutter));
-}
+let _uid = 0;
+function uid() { return `local-${++_uid}`; }
 
 export default function VikarTilgaengelighedPage() {
   const { bruger } = useAuth();
-  const [mandag, setMandag] = useState(() => getMandagForUge());
-
-  // Ny blok trækkes
-  const [trekker, setTrekker]   = useState(null); // { dagIdx, startMin, slutMin }
-  // Modal til bekræftelse/kommentar
-  const [nyBlok, setNyBlok]     = useState(null); // { dato, startTid, slutTid }
+  const [mandag, setMandag]       = useState(() => getMandagForUge());
+  const [lokale, setLokale]       = useState([]);
+  const [aktivId, setAktivId]     = useState(null);
   const [kommentar, setKommentar] = useState('');
   const [gemLoading, setGemLoading] = useState(false);
-  const [fejl, setFejl]         = useState('');
-  // Slet-bekræftelse
-  const [sletId, setSletId]     = useState(null);
 
-  const yScrollRef  = useRef(null);
-  const timeColRef  = useRef(null);
-  const syncing     = useRef(false);
-  const dragRef     = useRef(null);
+  const yScrollRef = useRef(null);
+  const timeColRef = useRef(null);
+  const syncing    = useRef(false);
+  const colRefs    = useRef({});
+  const dragRef    = useRef(null);
 
-  const { data: vikar } = useApi(
-    () => vikarService.getAll().then(alle => alle.find(v => v.email === bruger?.email)),
-    [bruger?.email]
-  );
-
-  const { data: tilgaengelighed, loading, error, refetch } = useApi(
-    () => vikar ? tilgaengelighedService.getMin() : Promise.resolve([]),
+  const { data: vikar } = useApi(vikarService.getMig, []);
+  const { data: serverBlokke, loading, refetch } = useApi(
+    () => tilgaengelighedService.getMin(),
     [vikar?.id]
   );
 
@@ -71,10 +52,21 @@ export default function VikarTilgaengelighedPage() {
   const idagStr = dagTilStreng(new Date());
 
   useEffect(() => {
-    if (!loading && yScrollRef.current) {
+    if (!loading && yScrollRef.current)
       yScrollRef.current.scrollTop = (8 - TIMER_START) * TIME_PX - 16;
-    }
   }, [loading]);
+
+  // Fjern lokale blokke der nu er bekræftet på serveren
+  useEffect(() => {
+    if (!serverBlokke) return;
+    setLokale(prev => prev.filter(lokal =>
+      !serverBlokke.some(s =>
+        s.date === lokal.date &&
+        s.start_time.slice(0,5) === lokal.start_time.slice(0,5) &&
+        s.status === 'optaget'
+      )
+    ));
+  }, [serverBlokke]);
 
   const handleYScroll = useCallback((e) => {
     if (syncing.current) return;
@@ -84,53 +76,149 @@ export default function VikarTilgaengelighedPage() {
   }, []);
 
   function gaaTilUge(r) {
-    setMandag(prev => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() + r * 7);
-      return d;
-    });
+    setMandag(prev => { const d = new Date(prev); d.setDate(d.getDate() + r*7); return d; });
+    setAktivId(null);
   }
 
-  // ── Drag for at oprette utilgængelighed ──────────────────
-  function getYFraEvent(e, kolonne) {
-    const rect = kolonne.getBoundingClientRect();
-    const scrollTop = yScrollRef.current?.scrollTop || 0;
-    return e.clientY - rect.top + scrollTop;
+  function getY(e, dagIdx) {
+    const col = colRefs.current[dagIdx];
+    if (!col) return 0;
+    return e.clientY - col.getBoundingClientRect().top + (yScrollRef.current?.scrollTop || 0);
   }
 
-  function startDrag(e, dagIdx) {
-    if (e.button !== 0) return;
+  const alleBlokke = [
+    ...(serverBlokke || []).filter(b => b.status === 'optaget'),
+    ...lokale,
+  ];
+
+  function blokkeForDag(dagStr) {
+    return alleBlokke.filter(b => b.date === dagStr);
+  }
+
+  // ── Gem til server ─────────────────────────────────────────
+  async function gem(blok) {
+    try {
+      await tilgaengelighedService.saet({
+        date:       blok.date,
+        start_time: blok.start_time,
+        end_time:   blok.end_time,
+        status:     'optaget',
+        kommentar:  blok.kommentar || null,
+      });
+      await refetch();
+    } catch (err) {
+      console.error('Gem fejlede:', err.message);
+      setLokale(prev => prev.filter(b => b.id !== blok.id));
+    }
+  }
+
+  async function slet(blok) {
+    if (blok._local) { setLokale(prev => prev.filter(b => b.id !== blok.id)); return; }
+    try { await tilgaengelighedService.delete(blok.id); await refetch(); }
+    catch (err) { console.error(err); }
+  }
+
+  async function gemKommentar(blok) {
+    setGemLoading(true);
+    const opdateret = { ...blok, kommentar };
+    if (blok._local) setLokale(prev => prev.map(b => b.id === blok.id ? opdateret : b));
+    setAktivId(null);
+    await gem(opdateret);
+    setGemLoading(false);
+  }
+
+  // ── Dobbeltklik → opret blok ───────────────────────────────
+  function handleDblClick(e, dagIdx) {
     e.preventDefault();
-    const kolonne = e.currentTarget;
-    const y = getYFraEvent(e, kolonne);
-    const startMin = yTilMinutter(y, TIME_PX) + TIMER_START * 60;
-    dragRef.current = { dagIdx, kolonne, startMin, slutMin: startMin + 60 };
-    setTrekker({ dagIdx, startMin, slutMin: startMin + 60 });
+    const y        = getY(e, dagIdx);
+    const midtMin  = yToMin(y);
+    const startMin = clamp(midtMin - 30, TIMER_START*60, TIMER_SLUT*60 - 60);
+    const slutMin  = startMin + 60;
+    const dato     = dagTilStreng(ugedage[dagIdx]);
+
+    // Ingen overlap
+    const harOverlap = blokkeForDag(dato).some(b => {
+      const bS = strToMin(b.start_time.slice(0,5)), bE = strToMin(b.end_time.slice(0,5));
+      return startMin < bE && slutMin > bS;
+    });
+    if (harOverlap) return;
+
+    const nyBlok = { id: uid(), date: dato, start_time: minToStr(startMin), end_time: minToStr(slutMin), status: 'optaget', kommentar: null, _local: true };
+    setLokale(prev => [...prev, nyBlok]);
+    gem(nyBlok);
+  }
+
+  // ── Mouse-down på blok → drag ─────────────────────────────
+  function handleBlokMouseDown(e, blok, dagIdx) {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    const y          = getY(e, dagIdx);
+    const startMin   = strToMin(blok.start_time.slice(0,5));
+    const slutMin    = strToMin(blok.end_time.slice(0,5));
+    const blokTop    = minToY(startMin);
+    const blokHeight = minToY(slutMin) - blokTop;
+    const relY       = y - blokTop;
+
+    let mode;
+    if (relY <= HANDLE_PX)                   mode = 'top';
+    else if (relY >= blokHeight - HANDLE_PX) mode = 'bottom';
+    else                                      mode = 'move';
+
+    let curStart = startMin, curSlut = slutMin, startY = y, hasMoved = false;
+    dragRef.current = { curStart, curSlut };
+
+    document.body.style.cursor     = mode === 'move' ? 'grabbing' : 'ns-resize';
+    document.body.style.userSelect = 'none';
 
     function onMove(ev) {
-      const y2 = getYFraEvent(ev, kolonne);
-      const slutMin = yTilMinutter(y2, TIME_PX) + TIMER_START * 60;
-      const maxMin = TIMER_SLUT * 60;
-      const clampedSlut = Math.min(Math.max(slutMin, dragRef.current.startMin + 15), maxMin);
-      dragRef.current.slutMin = clampedSlut;
-      setTrekker(prev => ({ ...prev, slutMin: clampedSlut }));
+      const delta    = getY(ev, dagIdx) - startY;
+      const deltaMin = snap(delta / TIME_PX * 60);
+      hasMoved = true;
+      const dur = slutMin - startMin;
+
+      if (mode === 'top') {
+        curStart = clamp(snap(startMin + deltaMin), TIMER_START*60, slutMin - SNAP);
+        curSlut  = slutMin;
+      } else if (mode === 'bottom') {
+        curStart = startMin;
+        curSlut  = clamp(snap(slutMin + deltaMin), startMin + SNAP, TIMER_SLUT*60);
+      } else {
+        curStart = clamp(snap(startMin + deltaMin), TIMER_START*60, TIMER_SLUT*60 - dur);
+        curSlut  = curStart + dur;
+      }
+
+      dragRef.current = { curStart, curSlut };
+
+      setLokale(prev => {
+        const existing = prev.find(b => b.id === blok.id);
+        const ny = { ...(existing || blok), id: blok.id, start_time: minToStr(curStart), end_time: minToStr(curSlut), _local: true };
+        return existing ? prev.map(b => b.id === blok.id ? ny : b) : [...prev, ny];
+      });
     }
 
     function onUp() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      const { dagIdx, startMin, slutMin } = dragRef.current;
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+
+      const { curStart, curSlut } = dragRef.current;
       dragRef.current = null;
-      setTrekker(null);
-      if (slutMin - startMin >= 15) {
-        const dag = ugedage[dagIdx];
-        setNyBlok({
-          dato: dagTilStreng(dag),
-          startTid: minutterTilStreng(startMin),
-          slutTid:  minutterTilStreng(slutMin),
-        });
-        setKommentar('');
-        setFejl('');
+
+      if (hasMoved) {
+        const opdateret = { ...blok, start_time: minToStr(curStart), end_time: minToStr(curSlut) };
+        if (!blok._local) setLokale(prev => [...prev.filter(b => b.id !== blok.id), { ...opdateret, _local: true }]);
+        gem(opdateret);
+      } else {
+        // Klik uden træk → åbn kommentar-modal
+        if (aktivId === blok.id) {
+          setAktivId(null);
+        } else {
+          setAktivId(blok.id);
+          setKommentar(blok.kommentar || '');
+        }
       }
     }
 
@@ -138,53 +226,9 @@ export default function VikarTilgaengelighedPage() {
     window.addEventListener('mouseup', onUp);
   }
 
-  async function gemUtilgaengelighed() {
-    if (!nyBlok) return;
-    setGemLoading(true);
-    setFejl('');
-    try {
-      await tilgaengelighedService.saet({
-        date:       nyBlok.dato,
-        start_time: nyBlok.startTid,
-        end_time:   nyBlok.slutTid,
-        status:     'optaget',
-        kommentar,
-      });
-      setNyBlok(null);
-      await refetch();
-    } catch (err) {
-      setFejl(err.message);
-    } finally {
-      setGemLoading(false);
-    }
-  }
-
-  async function sletTilgaengelighed(id) {
-    try {
-      await tilgaengelighedService.delete(id);
-      setSletId(null);
-      await refetch();
-    } catch (err) {
-      setFejl(err.message);
-    }
-  }
-
-  // ── Beregn blok-position ─────────────────────────────────
-  function blokPosition(startTid, slutTid) {
-    const [sh, sm] = startTid.split(':').map(Number);
-    const [eh, em] = slutTid.split(':').map(Number);
-    const startMin = (sh - TIMER_START) * 60 + sm;
-    const slutMin  = (eh - TIMER_START) * 60 + em;
-    return {
-      top:    (startMin / 60) * TIME_PX,
-      height: Math.max(((slutMin - startMin) / 60) * TIME_PX, 20),
-    };
-  }
-
   if (loading) return <LoadingSpinner tekst="Henter tilgængelighed…" />;
-  if (error)   return <ErrorMessage besked={error} />;
 
-  const totalGridW = ugedage.length * COL_W;
+  const aktivBlok = aktivId ? alleBlokke.find(b => b.id === aktivId) : null;
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 72px)' }}>
@@ -192,10 +236,8 @@ export default function VikarTilgaengelighedPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMandag(getMandagForUge())}
-            className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-          >
+          <button onClick={() => setMandag(getMandagForUge())}
+            className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
             I dag
           </button>
           <div className="flex border border-slate-200 rounded-lg overflow-hidden">
@@ -204,25 +246,21 @@ export default function VikarTilgaengelighedPage() {
           </div>
           <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
         </div>
-
-        <p className="text-xs text-slate-400">
-          Klik og træk på en dag for at markere utilgængelighed
-        </p>
+        <p className="text-xs text-slate-400">Dobbeltklik for at tilføje · Træk for at justere · Klik for kommentar</p>
       </div>
 
       {/* Kalender */}
       <div className="flex flex-1 min-h-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 
         {/* Tidssøjle */}
-        <div style={{ width: TIME_COL_W, minWidth: TIME_COL_W }} className="shrink-0 border-r border-slate-200 flex flex-col bg-white z-10">
+        <div style={{ width: TIME_COL_W, minWidth: TIME_COL_W }}
+          className="shrink-0 border-r border-slate-200 flex flex-col bg-white z-10">
           <div style={{ height: HEADER_H }} className="shrink-0 border-b border-slate-200" />
           <div ref={timeColRef} className="flex-1 overflow-hidden">
             <div style={{ height: TIMER.length * TIME_PX }}>
               {TIMER.map(t => (
                 <div key={t} className="border-b border-slate-100 flex items-start justify-end pr-2 pt-1" style={{ height: TIME_PX }}>
-                  <span className="text-xs text-slate-300 tabular-nums leading-none">
-                    {String(t).padStart(2, '0')}
-                  </span>
+                  <span className="text-xs text-slate-300 tabular-nums leading-none">{String(t).padStart(2,'0')}</span>
                 </div>
               ))}
             </div>
@@ -231,61 +269,36 @@ export default function VikarTilgaengelighedPage() {
 
         {/* Dag-kolonner */}
         <div className="flex-1 overflow-x-auto overflow-y-hidden min-w-0 flex flex-col min-h-0">
-
-          {/* Header */}
           <div className="flex shrink-0 border-b border-slate-200 bg-white sticky top-0 z-20"
-            style={{ width: totalGridW, height: HEADER_H }}>
+            style={{ width: ugedage.length * COL_W, height: HEADER_H }}>
             {ugedage.map((dag, i) => {
-              const dagStr = dagTilStreng(dag);
-              const erIdag = dagStr === idagStr;
-              const erFortid = dagStr < idagStr;
+              const erIdag = dagTilStreng(dag) === idagStr;
               return (
                 <div key={i} style={{ width: COL_W, minWidth: COL_W }}
                   className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0">
-                  <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : erFortid ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {DAGE[i].slice(0, 3)}
-                  </p>
-                  <p className={`text-2xl font-bold leading-tight ${erIdag ? 'text-blue-600' : erFortid ? 'text-slate-300' : 'text-slate-800'}`}>
-                    {dag.getDate()}
-                  </p>
-                  <p className={`text-xs ${erFortid ? 'text-slate-300' : 'text-slate-400'}`}>
-                    {dag.toLocaleDateString('da-DK', { month: 'short' })}
-                  </p>
+                  <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : 'text-slate-500'}`}>{DAGE[i].slice(0,3)}</p>
+                  <p className={`text-2xl font-bold leading-tight ${erIdag ? 'text-blue-600' : 'text-slate-800'}`}>{dag.getDate()}</p>
+                  <p className="text-xs text-slate-400">{dag.toLocaleDateString('da-DK', { month: 'short' })}</p>
                 </div>
               );
             })}
           </div>
 
-          {/* Gitter */}
           <div ref={yScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden"
-            onScroll={handleYScroll} style={{ width: totalGridW }}>
-            <div className="flex" style={{ width: totalGridW, height: TIMER.length * TIME_PX }}>
+            onScroll={handleYScroll} style={{ width: ugedage.length * COL_W }}>
+            <div className="flex" style={{ width: ugedage.length * COL_W, height: TIMER.length * TIME_PX }}>
               {ugedage.map((dag, i) => {
-                const dagStr  = dagTilStreng(dag);
-                const erIdag  = dagStr === idagStr;
-                const erFortid = dagStr < idagStr;
-
-                // Utilgængeligheds-blokke for denne dag
-                const dagBlokke = (tilgaengelighed || []).filter(t =>
-                  t.date === dagStr && t.status === 'optaget'
-                );
-
-                // Drag-preview for denne kolonne
-                const erDragKolonne = trekker?.dagIdx === i;
-                const dragTop    = erDragKolonne ? ((trekker.startMin - TIMER_START * 60) / 60) * TIME_PX : 0;
-                const dragHeight = erDragKolonne ? ((trekker.slutMin  - trekker.startMin) / 60) * TIME_PX : 0;
+                const dagStr    = dagTilStreng(dag);
+                const erIdag    = dagStr === idagStr;
+                const dagBlokke = blokkeForDag(dagStr);
 
                 return (
                   <div key={i}
-                    className={`relative border-r border-slate-200 last:border-r-0 shrink-0 select-none
-                      ${erIdag ? 'bg-blue-50/20' : ''}
-                      ${erFortid ? 'bg-slate-50/50' : ''}
-                      ${!erFortid ? 'cursor-crosshair' : 'cursor-default'}
-                    `}
+                    ref={el => colRefs.current[i] = el}
+                    className={`relative border-r border-slate-200 last:border-r-0 shrink-0 select-none cursor-default ${erIdag ? 'bg-blue-50/20' : ''}`}
                     style={{ width: COL_W, height: TIMER.length * TIME_PX }}
-                    onMouseDown={erFortid ? undefined : (e) => startDrag(e, i)}
+                    onDoubleClick={e => handleDblClick(e, i)}
                   >
-                    {/* Grid-linjer */}
                     {TIMER.map(t => (
                       <div key={t} className="absolute w-full border-b border-slate-100"
                         style={{ top: (t - TIMER_START) * TIME_PX, height: TIME_PX }} />
@@ -295,51 +308,61 @@ export default function VikarTilgaengelighedPage() {
                         style={{ top: (t - TIMER_START) * TIME_PX + TIME_PX / 2 }} />
                     ))}
 
-                    {/* Drag-preview */}
-                    {erDragKolonne && dragHeight > 0 && (
-                      <div className="absolute left-1 right-1 rounded-lg z-10 pointer-events-none"
-                        style={{
-                          top: dragTop,
-                          height: dragHeight,
-                          backgroundColor: 'rgba(239,68,68,0.15)',
-                          border: '2px dashed #EF4444',
-                        }}>
-                        <p className="text-xs text-red-500 font-medium px-2 pt-1">
-                          {minutterTilStreng(trekker.startMin)} – {minutterTilStreng(trekker.slutMin)}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Utilgængeligheds-blokke */}
                     {dagBlokke.map(blok => {
-                      const { top, height } = blokPosition(
-                        blok.start_time.slice(0, 5),
-                        blok.end_time.slice(0, 5)
-                      );
+                      const sMin   = strToMin(blok.start_time.slice(0,5));
+                      const eMin   = strToMin(blok.end_time.slice(0,5));
+                      const top    = minToY(sMin);
+                      const height = Math.max(minToY(eMin) - top, 24);
+                      const erAktiv = aktivId === blok.id;
+
                       return (
-                        <button key={blok.id}
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={() => setSletId(blok.id)}
-                          className="absolute left-1 right-1 rounded-lg z-20 text-left px-2 py-1 group transition-all hover:brightness-95"
+                        <div key={blok.id}
+                          className="absolute left-1 right-1 rounded-lg overflow-hidden group z-20"
                           style={{
-                            top: top + 1,
-                            height: height - 2,
-                            backgroundColor: 'rgba(239,68,68,0.12)',
-                            border: '1.5px solid #FECACA',
-                          }}>
-                          <p className="text-xs font-semibold text-red-600 truncate leading-tight">
-                            Utilgængelig
-                          </p>
-                          {height > 36 && blok.kommentar && (
-                            <p className="text-xs text-red-400 truncate">{blok.kommentar}</p>
-                          )}
-                          {height > 28 && (
-                            <p className="text-xs text-red-300">
-                              {blok.start_time.slice(0, 5)} – {blok.end_time.slice(0, 5)}
-                            </p>
-                          )}
-                          <span className="absolute top-1 right-1.5 text-red-300 opacity-0 group-hover:opacity-100 text-xs transition-opacity">✕</span>
-                        </button>
+                            top: top + 1, height: height - 2,
+                            backgroundColor: 'rgba(239,68,68,0.13)',
+                            border: `1.5px solid ${erAktiv ? '#EF4444' : '#FCA5A5'}`,
+                            boxShadow: erAktiv ? '0 0 0 2px rgba(239,68,68,0.2)' : undefined,
+                          }}
+                          onMouseDown={e => handleBlokMouseDown(e, blok, i)}
+                        >
+                          {/* Top resize zone */}
+                          <div className="absolute top-0 left-0 right-0 cursor-n-resize z-30" style={{ height: HANDLE_PX }} />
+
+                          {/* Indhold */}
+                          <div className="px-2 pt-1 pb-2 pointer-events-none">
+                            <p className="text-xs font-semibold text-red-600 leading-tight">Utilgængelig</p>
+                            {height > 32 && (
+                              <p className="text-xs text-red-400">{minToStr(sMin)} – {minToStr(eMin)}</p>
+                            )}
+                            {height > 48 && blok.kommentar && (
+                              <p className="text-xs text-red-400 italic truncate">{blok.kommentar}</p>
+                            )}
+                          </div>
+
+                          {/* × slet */}
+                          <button
+                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-100 text-red-400 hover:bg-red-200 hover:text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-30"
+                            style={{ fontSize: '10px', lineHeight: 1 }}
+                            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+                            onClick={e => { e.stopPropagation(); slet(blok); }}
+                          >
+                            ×
+                          </button>
+
+                          {/* Bottom resize zone */}
+                          <div
+                            className="absolute bottom-0 left-0 right-0 cursor-s-resize z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ height: HANDLE_PX, backgroundColor: 'rgba(239,68,68,0.15)' }}
+                            onMouseDown={e => {
+                              e.stopPropagation();
+                              // Force bottom mode
+                              handleBlokMouseDown({ ...e, _forceBottom: true }, blok, i);
+                            }}
+                          >
+                            <div className="w-8 h-0.5 rounded-full bg-red-300" />
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -350,99 +373,40 @@ export default function VikarTilgaengelighedPage() {
         </div>
       </div>
 
-      {/* ── Ny utilgængelighed modal ── */}
-      {nyBlok && (
+      {/* Kommentar-modal */}
+      {aktivBlok && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => setNyBlok(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100">
-
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => setAktivId(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm border border-slate-100 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-base font-semibold text-slate-900">Tilføj utilgængelighed</h2>
-              <button onClick={() => setNyBlok(null)} className="text-slate-300 hover:text-slate-500 text-2xl leading-none">×</button>
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Utilgængelighed</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {aktivBlok.start_time.slice(0,5)} – {aktivBlok.end_time.slice(0,5)}
+                </p>
+              </div>
+              <button onClick={() => setAktivId(null)} className="text-slate-300 hover:text-slate-500 text-2xl leading-none">×</button>
             </div>
-
             <div className="px-6 py-5 space-y-4">
-              {/* Dato og tid — læs-only visning */}
-              <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 space-y-1.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Dato</span>
-                  <span className="font-medium text-slate-800">
-                    {new Date(nyBlok.dato).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Tidspunkt</span>
-                  <span className="font-medium text-slate-800">{nyBlok.startTid} – {nyBlok.slutTid}</span>
-                </div>
-              </div>
-
-              {/* Juster tider */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1">Fra</label>
-                  <input type="time" value={nyBlok.startTid}
-                    onChange={e => setNyBlok(prev => ({ ...prev, startTid: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400" />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-500 mb-1">Til</label>
-                  <input type="time" value={nyBlok.slutTid}
-                    onChange={e => setNyBlok(prev => ({ ...prev, slutTid: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400" />
-                </div>
-              </div>
-
-              {/* Kommentar */}
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Kommentar (valgfri)</label>
-                <input
-                  type="text"
-                  value={kommentar}
+                <input autoFocus type="text" value={kommentar}
                   onChange={e => setKommentar(e.target.value)}
                   placeholder="F.eks. lægetid, kursus…"
+                  onKeyDown={e => { if (e.key === 'Enter') gemKommentar(aktivBlok); if (e.key === 'Escape') setAktivId(null); }}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
-                  autoFocus
-                  onKeyDown={e => e.key === 'Enter' && gemUtilgaengelighed()}
                 />
               </div>
-
-              {fejl && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-                  {fejl}
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-1">
-                <button onClick={() => setNyBlok(null)}
+              <div className="flex gap-2">
+                <button onClick={() => setAktivId(null)}
                   className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
                   Annuller
                 </button>
-                <button onClick={gemUtilgaengelighed} disabled={gemLoading}
+                <button onClick={() => gemKommentar(aktivBlok)} disabled={gemLoading}
                   className="flex-1 py-2 text-sm bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
                   {gemLoading ? 'Gemmer…' : 'Gem'}
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Slet bekræftelse ── */}
-      {sletId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => setSletId(null)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 border border-slate-100">
-            <p className="text-sm font-medium text-slate-900 mb-1">Fjern utilgængelighed?</p>
-            <p className="text-xs text-slate-400 mb-5">Blokken slettes og du vil fremstå som ledig i dette tidsrum.</p>
-            <div className="flex gap-2">
-              <button onClick={() => setSletId(null)}
-                className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
-                Behold
-              </button>
-              <button onClick={() => sletTilgaengelighed(sletId)}
-                className="flex-1 py-2 text-sm bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors">
-                Fjern
-              </button>
             </div>
           </div>
         </div>

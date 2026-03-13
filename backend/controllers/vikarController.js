@@ -22,6 +22,22 @@ const VikarController = {
   },
 
   /**
+   * GET /vikarer/mig
+   * Returnerer den indloggede vikars egne data.
+   * Tilgængelig for vikarer (ikke kun admin).
+   */
+  async getMig(req, res) {
+    try {
+      const vikar = await VikarModel.getByUserId(req.bruger.id);
+      if (!vikar) return res.status(404).json({ error: 'Vikar ikke fundet' });
+      res.json(vikar);
+    } catch (err) {
+      console.error('VikarController.getMig:', err);
+      res.status(500).json({ error: 'Serverfejl' });
+    }
+  },
+
+  /**
    * GET /vikarer/ledige?dato=2026-03-11&start=08:00&slut=10:00
    * Finder ledige vikarer i et tidsrum. (User Story 3)
    */

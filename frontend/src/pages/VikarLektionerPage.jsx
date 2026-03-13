@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { lektionService } from '../api/lektionService';
 import { vikarService } from '../api/vikarService';
-import { tildelingService } from '../api/tildelingService';
 import { useApi } from '../hooks/useApi';
 import {
   getMandagForUge,
@@ -33,20 +32,15 @@ export default function VikarLektionerPage() {
   const timeColRef = useRef(null);
   const syncing    = useRef(false);
 
-  // Hent vikarens egne data
-  const { data: vikar, loading: vikarLoading } = useApi(
-    () => vikarService.getAll().then(alle => alle.find(v => v.email === bruger?.email)),
-    [bruger?.email]
+  // Hent vikarens egne data via dedikeret /vikarer/mig endpoint
+  const { data: vikar, loading: vikarLoading } = useApi(vikarService.getMig, []);
+
+  // Hent lektioner tildelt denne vikar direkte via /lektioner/vikar/:id
+  const { data: mineLektionerRaw, loading: lekLoading, error } = useApi(
+    () => vikar ? lektionService.getForVikar(vikar.id) : Promise.resolve([]),
+    [vikar?.id]
   );
 
-  const { data: alleLektioner, loading: lekLoading, error } = useApi(
-    () => lektionService.getAll(),
-    []
-  );
-  const { data: alleTildelinger, loading: tilLoading } = useApi(
-    () => tildelingService.getAll(),
-    []
-  );
 
   const ugedage = getUgedage(mandag);
   const ugeNr   = getUgenummer(mandag);
@@ -75,12 +69,9 @@ export default function VikarLektionerPage() {
     setValgtLektion(null);
   }
 
-  // Filtrer lektioner tildelt denne vikar
-  const mineTildelinger = (alleTildelinger || []).filter(t => t.substitute_id === vikar?.id);
-  const mineLektionIds  = new Set(mineTildelinger.map(t => t.lesson_id));
-  const mineLektioner   = (alleLektioner || []).filter(l => mineLektionIds.has(l.id));
+  const mineLektioner = mineLektionerRaw || [];
 
-  const loading = vikarLoading || lekLoading || tilLoading;
+  const loading = vikarLoading || lekLoading;
 
   if (loading) return <LoadingSpinner tekst="Henter lektioner…" />;
   if (error)   return <ErrorMessage besked={error} />;
@@ -151,7 +142,7 @@ export default function VikarLektionerPage() {
                   <p className={`text-2xl font-bold leading-tight ${erIdag ? 'text-blue-600' : 'text-slate-800'}`}>
                     {dag.getDate()}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-400 capitalize">
                     {dag.toLocaleDateString('da-DK', { month: 'short' })}
                   </p>
                   {antalDag > 0 && (
@@ -185,12 +176,11 @@ export default function VikarLektionerPage() {
                     ))}
                     {/* Lektioner */}
                     {dagLektioner.map(lektion => {
-                      const tildeling = mineTildelinger.find(t => t.lesson_id === lektion.id);
                       const { top, height } = beregnPosition(lektion.start_time, lektion.end_time, TIME_PX);
                       const erFortid = new Date(lektion.end_time) < new Date();
                       return (
                         <button key={lektion.id}
-                          onClick={() => setValgtLektion(valgtLektion?.id === lektion.id ? null : { ...lektion, tildeling })}
+                          onClick={() => setValgtLektion(valgtLektion?.id === lektion.id ? null : lektion)}
                           className={`absolute left-1 right-1 rounded-lg px-2 py-1.5 text-left transition-all hover:shadow-md z-10 overflow-hidden ${erFortid ? 'opacity-50' : ''}`}
                           style={{
                             top: top + 1,
