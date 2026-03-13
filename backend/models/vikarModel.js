@@ -31,26 +31,33 @@ const VikarModel = {
 
   /**
    * Finder ledige vikarer i et givent tidsrum (User Story 3).
+   *
    * En vikar er ledig hvis:
-   * - De har en tilgaengelighed-post der dækker tidsrummet med status 'ledig'
-   * - De IKKE allerede er tildelt en lektion i det tidsrum
+   *   1. De har tilgængelighed der dækker tidsrummet med status 'ledig'
+   *   2. De IKKE allerede har en tildelt lektion der overlapper tidsrummet
+   *
+   * Overlap-logik: To intervaller [A_start, A_slut] og [B_start, B_slut] overlapper hvis:
+   *   A_start < B_slut OG A_slut > B_start
+   *
+   * Parametre: dato='2026-03-13', startTid='08:00', slutTid='08:45'
    */
   async getLedigI({ dato, startTid, slutTid }) {
     const result = await pool.query(`
       SELECT DISTINCT v.id, v.name, v.phone, b.email
       FROM vikarer v
-      JOIN brugere b ON b.id = v.user_id
+      JOIN brugere b        ON b.id = v.user_id
       JOIN tilgaengelighed t ON t.substitute_id = v.id
-      WHERE t.date = $1
-        AND t.start_time <= $2
-        AND t.end_time   >= $3
-        AND t.status = 'ledig'
+      WHERE t.date       = $1
+        AND t.start_time <= $2::time
+        AND t.end_time   >= $3::time
+        AND t.status     = 'ledig'
         AND v.id NOT IN (
           SELECT ti.substitute_id
           FROM tildelinger ti
           JOIN lektioner l ON l.id = ti.lesson_id
-          WHERE l.start_time < ($1::date + $3::time)::timestamp
-            AND l.end_time   > ($1::date + $2::time)::timestamp
+          WHERE DATE(l.start_time) = $1
+            AND l.start_time::time < $3::time
+            AND l.end_time::time   > $2::time
         )
       ORDER BY v.name
     `, [dato, startTid, slutTid]);

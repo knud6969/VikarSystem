@@ -212,16 +212,24 @@ export default function AdminKalenderPage() {
 
   // ── Lektion-handlinger ────────────────────────────────────
   function aabneLektion(lektion, tildeling) {
-    setValgtLektion({ ...lektion, tildeling });
-    setVikarListe(null);
+    const l = { ...lektion, tildeling };
+    setValgtLektion(l);
     setActionFejl('');
+    // Auto-hent vikarer hvis lektionen er udækket
+    if (lektion.status === 'udækket') {
+      setVikarListe(null);
+      hentLedigeVikarer(l);
+    } else {
+      setVikarListe(null);
+    }
   }
 
   async function hentLedigeVikarer(lektion) {
     setHenterVikarer(true);
     try {
       const s = new Date(lektion.start_time), e = new Date(lektion.end_time);
-      const fmt = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+      // Brug HH:MM format (ikke da-DK locale som giver '08.40' med punktum)
+      const fmt = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
       setVikarListe(await vikarService.getLedige(
         dagTilStreng(s), fmt(s), fmt(e)
       ));
@@ -235,8 +243,37 @@ export default function AdminKalenderPage() {
   async function tildelVikar(vikarId) {
     setActionLoading(true); setActionFejl('');
     try {
-      await tildelingService.tildel(valgtLektion.id, vikarId);
-      refetch();
+      const tildeling = await tildelingService.tildel(valgtLektion.id, vikarId);
+      // Optimistisk opdatering: opdater valgtLektion med ny status og tildeling
+      // så sidepanelet afspejler ændringen inden refetch er færdig
+      setValgtLektion(prev => ({
+        ...prev,
+        status: 'dækket',
+        tildeling,
+      }));
+      await refetch();
+      setValgtLektion(null);
+    } catch (err) {
+      setActionFejl(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function tildelAlleIdag(vikarId) {
+    if (!valgtLektion) return;
+    setActionLoading(true); setActionFejl('');
+    try {
+      // Find alle udækkede lektioner for samme lærer samme dag
+      const lektionsDag = dagTilStreng(new Date(valgtLektion.start_time));
+      const alleUdaekket = lektioner.filter(l =>
+        l.teacher_id === valgtLektion.teacher_id &&
+        dagTilStreng(new Date(l.start_time)) === lektionsDag &&
+        l.status === 'udækket'
+      );
+      // Tildel én ad gangen — bruger eksisterende endpoint
+      await Promise.all(alleUdaekket.map(l => tildelingService.tildel(l.id, vikarId)));
+      await refetch();
       setValgtLektion(null);
     } catch (err) {
       setActionFejl(err.message);
@@ -643,10 +680,21 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, onLektionKlik 
                 {lektion.klasse_navn}
               </p>
             )}
-            {tildeling && height > 44 && (
-              <p className="text-xs opacity-50 truncate" style={{ color: farve.text }}>
-                👤 {tildeling.vikar_navn}
-              </p>
+            {tildeling && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <span
+                  className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/40 text-xs font-bold leading-none shrink-0"
+                  style={{ color: farve.text, fontSize: '9px' }}
+                  title={tildeling.vikar_navn}
+                >
+                  {tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
+                </span>
+                {height > 44 && (
+                  <span className="text-xs opacity-60 truncate" style={{ color: farve.text, fontSize: '10px' }}>
+                    {tildeling.vikar_navn}
+                  </span>
+                )}
+              </div>
             )}
           </button>
         );
@@ -660,8 +708,9 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, onLektionKlik 
  * ──────────────────────────────────────────────────────────── */
 function DetaljePanelIndhold({
   lektion, vikarListe, henterVikarer, actionLoading, actionFejl,
-  onLuk, onHentVikarer, onTildelVikar, onFjernTildeling,
+  onLuk, onHentVikarer, onTildelVikar, onTildelAlle, onFjernTildeling,
 }) {
+  const [tildelAlle, setTildelAlle] = useState(false);
   const start  = new Date(lektion.start_time);
   const slut   = new Date(lektion.end_time);
   const fmt    = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -710,17 +759,37 @@ function DetaljePanelIndhold({
               Ingen ledige vikarer
             </p>
           ) : (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Vælg vikar</p>
+            <div className="space-y-2">
+              {/* Tildel-alle checkboks */}
+              <label className="flex items-center gap-2 px-1 py-1 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={tildelAlle}
+                  onChange={e => setTildelAlle(e.target.checked)}
+                  className="rounded border-slate-300 text-blue-600"
+                />
+                <span className="text-xs text-slate-500 group-hover:text-slate-700 transition-colors">
+                  Tildel alle lærerens lektioner i dag
+                </span>
+              </label>
+
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wide pt-1">Vælg vikar</p>
               {vikarListe.map(v => (
                 <button
                   key={v.id}
-                  onClick={() => onTildelVikar(v.id)}
+                  onClick={() => tildelAlle ? onTildelAlle(v.id) : onTildelVikar(v.id)}
                   disabled={actionLoading}
                   className="w-full text-left px-3 py-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-colors disabled:opacity-50"
                 >
-                  <p className="text-xs font-medium text-slate-800">{v.name}</p>
-                  <p className="text-xs text-slate-400">{v.email}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-slate-800">{v.name}</p>
+                      <p className="text-xs text-slate-400">{v.email}</p>
+                    </div>
+                    <span className="text-xs text-blue-500 font-medium shrink-0 ml-2">
+                      {tildelAlle ? 'Tildel alle' : 'Tildel'}
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
