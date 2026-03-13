@@ -4,11 +4,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import AdminKalenderPage from './pages/AdminKalenderPage';
-import {
-  VikarLektionerPage,
-  VikarTilgaengelighedPage,
-  UautorisPage,
-} from './pages/PlaceholderPages';
+import VikarLektionerPage from './pages/VikarLektionerPage';
+import VikarTilgaengelighedPage from './pages/VikarTilgaengelighedPage';
+import { UautorisPage } from './pages/PlaceholderPages';
 
 export default function App() {
   return (

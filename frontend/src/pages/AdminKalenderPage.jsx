@@ -23,11 +23,11 @@ import SygemeldingModal from '../components/kalender/SygemeldingModal';
 import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
 
 const TIME_PX       = 64;
-const COL_W         = 120;
-const UGEOVERSIGT_COL_W = 180; // bredere kolonner i ugeoversigt
+const COL_W         = 140;
+const UGEOVERSIGT_COL_W = 200; // bredere kolonner i ugeoversigt
 const TIME_COL_W    = 48;
 const HEADER_H      = 72;
-const ARBEJDS_START = 8;
+const ARBEJDS_START = 7;
 const TIMER         = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
 
 function getInitialer(navn) {
@@ -676,30 +676,25 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, onLektionKlik 
               border: `1.5px solid ${farve.border}`,
             }}
           >
-            <p className="font-semibold text-xs leading-tight truncate" style={{ color: farve.text }}>
-              {lektion.subject}
-            </p>
-            {height > 32 && (
-              <p className="text-xs opacity-60 truncate" style={{ color: farve.text }}>
-                {lektion.klasse_navn}
+            {/* Fag + initialer på samme linje */}
+            <div className="flex items-center justify-between gap-1">
+              <p className="font-semibold text-xs leading-tight truncate" style={{ color: farve.text }}>
+                {lektion.subject}
               </p>
-            )}
-            {tildeling && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <span
-                  className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/40 text-xs font-bold leading-none shrink-0"
-                  style={{ color: farve.text, fontSize: '9px' }}
-                  title={tildeling.vikar_navn}
-                >
-                  {tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
-                </span>
-                {height > 44 && (
-                  <span className="text-xs opacity-60 truncate" style={{ color: farve.text, fontSize: '10px' }}>
-                    {tildeling.vikar_navn}
-                  </span>
-                )}
-              </div>
-            )}
+              <span
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/50 font-bold shrink-0"
+                style={{ color: farve.text, fontSize: '9px' }}
+                title={tildeling ? tildeling.vikar_navn : lektion.laerer_navn}
+              >
+                {tildeling
+                  ? tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
+                  : lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
+                }
+              </span>
+            </div>
+            <p className="text-xs opacity-60 truncate" style={{ color: farve.text }}>
+              {lektion.klasse_navn}
+            </p>
           </button>
         );
       })}

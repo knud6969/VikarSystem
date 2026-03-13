@@ -3,6 +3,7 @@ const pool = require('../config/db');
 const TilgaengelighedModel = {
   /**
    * Henter al tilgængelighed for en specifik vikar.
+   * Returnerer ALLE (ledig + optaget) så vikarsiden kan vise utilgængeligheder.
    */
   async getForVikar(vikarId) {
     const result = await pool.query(`
@@ -15,17 +16,21 @@ const TilgaengelighedModel = {
   },
 
   /**
-   * Opretter eller opdaterer tilgængelighed for en vikar på en given dag.
+   * Opretter eller opdaterer tilgængelighed/utilgængelighed for en vikar.
+   * Understøtter kommentar-felt til utilgængeligheder.
    * (User Story 6)
    */
-  async saet({ substitute_id, date, start_time, end_time, status }) {
+  async saet({ substitute_id, date, start_time, end_time, status, kommentar = null }) {
     const result = await pool.query(`
-      INSERT INTO tilgaengelighed (substitute_id, date, start_time, end_time, status)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO tilgaengelighed (substitute_id, date, start_time, end_time, status, kommentar)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (substitute_id, date, start_time)
-      DO UPDATE SET end_time = $4, status = $5
+      DO UPDATE SET
+        end_time  = $4,
+        status    = $5,
+        kommentar = $6
       RETURNING *
-    `, [substitute_id, date, start_time, end_time, status]);
+    `, [substitute_id, date, start_time, end_time, status, kommentar]);
     return result.rows[0];
   },
 

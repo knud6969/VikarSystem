@@ -5,6 +5,6 @@ import { api } from './client';
  */
 export const tilgaengelighedService = {
   getMin: ()       => api.get('/tilgaengelighed/min'),
-  saet:   (data)   => api.post('/tilgaengelighed', data),
+  saet:   (data)   => api.post('/tilgaengelighed', data),  // data kan inkl. kommentar
   delete: (id)     => api.delete(`/tilgaengelighed/${id}`),
 };
