@@ -102,7 +102,7 @@ const FravaerModel = {
 
       // Sæt end_date til I GÅR så læreren ikke fremstår fraværende resten af i dag
       await client.query(
-        "UPDATE fravaer SET end_date = CURRENT_DATE - INTERVAL '1 day' WHERE id = $1",
+        "UPDATE fravaer SET end_date = CURRENT_DATE - 1 WHERE id = $1",
         [id]
       );
 
@@ -134,14 +134,16 @@ const FravaerModel = {
 
         if (daekkedeRes.rows.length > 0) {
           const ids = daekkedeRes.rows.map(r => r.id);
+          // Brug placeholders i stedet for ANY for bedre kompatibilitet
+          const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
           await client.query(
-            'DELETE FROM tildelinger WHERE lesson_id = ANY($1::int[])',
-            [ids]
+            `DELETE FROM tildelinger WHERE lesson_id IN (${placeholders})`,
+            ids
           );
-          await client.query(`
-            UPDATE lektioner SET status = 'normal'
-            WHERE id = ANY($1::int[])
-          `, [ids]);
+          await client.query(
+            `UPDATE lektioner SET status = 'normal' WHERE id IN (${placeholders})`,
+            ids
+          );
         }
 
         // Normalisér udækkede lektioner
@@ -156,9 +158,7 @@ const FravaerModel = {
 
       await client.query('COMMIT');
 
-      return {
-        normaliseredelektioner: lektionerRes.rows.length,
-      };
+      return { normaliseredelektioner: 'ok' };
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

@@ -19,10 +19,15 @@ export default function RaskmeldingModal({ laerer, onTilbage, onSuccess }) {
   const { data: fravaerListe } = useApi(fravaerService.getAll, []);
 
   const idagStr = dagTilStreng(new Date());
-  const aktivtFravaer = (fravaerListe || []).find(f =>
-    Number(f.teacher_id) === Number(laerer.id) &&
-    String(f.end_date).slice(0, 10) >= idagStr
-  );
+
+  // Find aktivt fravær: start_date <= i dag OG end_date >= i går
+  // >= i går fordi afslutMedLektioner sætter end_date = CURRENT_DATE - 1
+  // og vi vil stadig kunne raskmeldes lærere der var syge i går eller tidligere
+  // Find det seneste fravær for læreren — læreren er markeret syg
+  // så der MÅ eksistere et fravær. Tag det med seneste start_date.
+  const aktivtFravaer = (fravaerListe || [])
+    .filter(f => Number(f.teacher_id) === Number(laerer.id))
+    .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)))[0] || null;
 
   async function handleRaskmelding(bevarTildelinger) {
     if (!aktivtFravaer) { setFejl('Intet aktivt fravær fundet'); return; }
