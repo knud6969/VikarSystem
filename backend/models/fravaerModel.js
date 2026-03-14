@@ -113,28 +113,29 @@ const FravaerModel = {
       );
 
       if (bevarTildelinger) {
-        // Bevar vikardækning: kun 'udækket' lektioner normaliseres
+        // Bevar vikardækning: normaliser 'udækket' lektioner i HELE fraværsperioden
         // 'dækket' lektioner beholdes med deres vikarer
         await client.query(`
           UPDATE lektioner
           SET status = 'normal'
-          WHERE teacher_id        = $1
-            AND DATE(start_time) >= CURRENT_DATE
-            AND status            = 'udækket'
-        `, [fravaer.teacher_id]);
+          WHERE teacher_id                 = $1
+            AND DATE(start_time)          >= $2
+            AND DATE(start_time)          <= $3
+            AND status                     = 'udækket'
+        `, [fravaer.teacher_id, fravaer.start_date, fravaer.end_date]);
       } else {
-        // Fjern alle tildelinger: sæt ALLE fremtidige lektioner (dækket + udækket) til normal
-        // og slet tilhørende tildelinger
+        // Fjern ALLE tildelinger i fraværsperioden — inkl. lektioner der er i fortiden
+        // (vikaren er allerede mødt op og undervist, men vi normaliserer data)
         const daekkedeRes = await client.query(`
           SELECT id FROM lektioner
-          WHERE teacher_id        = $1
-            AND DATE(start_time) >= CURRENT_DATE
-            AND status            = 'dækket'
-        `, [fravaer.teacher_id]);
+          WHERE teacher_id                 = $1
+            AND DATE(start_time)          >= $2
+            AND DATE(start_time)          <= $3
+            AND status                     = 'dækket'
+        `, [fravaer.teacher_id, fravaer.start_date, fravaer.end_date]);
 
         if (daekkedeRes.rows.length > 0) {
           const ids = daekkedeRes.rows.map(r => r.id);
-          // Brug placeholders i stedet for ANY for bedre kompatibilitet
           const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
           await client.query(
             `DELETE FROM tildelinger WHERE lesson_id IN (${placeholders})`,
@@ -146,14 +147,15 @@ const FravaerModel = {
           );
         }
 
-        // Normalisér udækkede lektioner
+        // Normaliser udækkede lektioner i fraværsperioden
         await client.query(`
           UPDATE lektioner
           SET status = 'normal'
-          WHERE teacher_id        = $1
-            AND DATE(start_time) >= CURRENT_DATE
-            AND status            = 'udækket'
-        `, [fravaer.teacher_id]);
+          WHERE teacher_id                 = $1
+            AND DATE(start_time)          >= $2
+            AND DATE(start_time)          <= $3
+            AND status                     = 'udækket'
+        `, [fravaer.teacher_id, fravaer.start_date, fravaer.end_date]);
       }
 
       await client.query('COMMIT');
