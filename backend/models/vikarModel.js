@@ -45,12 +45,13 @@ const VikarModel = {
     const result = await pool.query(`
       SELECT DISTINCT v.id, v.name, v.phone, b.email
       FROM vikarer v
-      JOIN brugere b        ON b.id = v.user_id
+      JOIN brugere b         ON b.id = v.user_id
       JOIN tilgaengelighed t ON t.substitute_id = v.id
       WHERE t.date       = $1
         AND t.start_time <= $2::time
         AND t.end_time   >= $3::time
         AND t.status     = 'ledig'
+        -- Ikke allerede tildelt en lektion der overlapper tidsrummet
         AND v.id NOT IN (
           SELECT ti.substitute_id
           FROM tildelinger ti
@@ -58,6 +59,15 @@ const VikarModel = {
           WHERE DATE(l.start_time) = $1
             AND l.start_time::time < $3::time
             AND l.end_time::time   > $2::time
+        )
+        -- Ikke markeret utilgængelig i et overlappende tidsrum
+        AND v.id NOT IN (
+          SELECT opt.substitute_id
+          FROM tilgaengelighed opt
+          WHERE opt.date       = $1
+            AND opt.status     = 'optaget'
+            AND opt.start_time < $3::time
+            AND opt.end_time   > $2::time
         )
       ORDER BY v.name
     `, [dato, startTid, slutTid]);

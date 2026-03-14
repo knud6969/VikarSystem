@@ -153,7 +153,7 @@ export default function AdminKalenderPage() {
 
   // Fravær for valgt dag (normal) eller alle dage (ugeoversigt håndteres per kolonne)
   const valgtDagStr = ugedage[valgtDagIdx] ? dagTilStreng(ugedage[valgtDagIdx]) : null;
-  const dagFravaer  = fravaer.filter(f => f.start_date <= valgtDagStr && f.end_date >= valgtDagStr);
+  const dagFravaer  = fravaer.filter(f => String(f.start_date).slice(0,10) <= valgtDagStr && String(f.end_date).slice(0,10) >= valgtDagStr);
 
   // ── Navigation ────────────────────────────────────────────
   function gaaTilUge(r) {
@@ -446,7 +446,7 @@ export default function AdminKalenderPage() {
                 ? ugedage.map((dag, i) => {
                     const dagStr = dagTilStreng(dag);
                     const erIdag = dagStr === idagStr;
-                    const dagFravaerUge = fravaer.filter(f => f.start_date <= dagStr && f.end_date >= dagStr && f.teacher_id === ugePerson.id);
+                    const dagFravaerUge = fravaer.filter(f => String(f.start_date).slice(0,10) <= dagStr && String(f.end_date).slice(0,10) >= dagStr && Number(f.teacher_id) === Number(ugePerson.id));
 
                     return (
                       <div
@@ -473,7 +473,9 @@ export default function AdminKalenderPage() {
                 : gitterKolonner.map(({ person }) => {
                     const nøgle     = `${person.type}-${person.id}`;
                     const erValgt   = valgtPersonId === nøgle;
-                    const erFravaer = person.type === 'laerer' && person.status !== 'aktiv';
+                    const erFravaer = person.type === 'laerer' && dagFravaer.some(
+                      f => Number(f.teacher_id) === Number(person.id)
+                    );
 
                     return (
                       <button
@@ -521,7 +523,7 @@ export default function AdminKalenderPage() {
                           : tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === ugePerson.id))
                       );
                       const erFravaer = ugePerson.type === 'laerer' && fravaer.some(
-                        f => f.teacher_id === ugePerson.id && f.start_date <= dagStr && f.end_date >= dagStr
+                        f => Number(f.teacher_id) === Number(ugePerson.id) && String(f.start_date).slice(0,10) <= dagStr && String(f.end_date).slice(0,10) >= dagStr
                       );
 
                       return (
@@ -532,7 +534,7 @@ export default function AdminKalenderPage() {
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
                           dagOptaget={ugePerson.type === 'vikar'
-                            ? tilgaengelighed.filter(t => t.substitute_id === ugePerson.id && t.date === dagStr)
+                            ? tilgaengelighed.filter(t => Number(t.substitute_id) === Number(ugePerson.id) && t.date === dagStr)
                             : []}
                           onLektionKlik={(l) => aabneLektion(l, tildelinger.find(t => t.lesson_id === l.id))}
                         />
@@ -547,7 +549,9 @@ export default function AdminKalenderPage() {
                         if (person.type === 'laerer') return l.teacher_id === person.id;
                         return tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === person.id);
                       });
-                      const erFravaer = person.type === 'laerer' && person.status !== 'aktiv';
+                      const erFravaer = person.type === 'laerer' && dagFravaer.some(
+                      f => Number(f.teacher_id) === Number(person.id)
+                    );
 
                       return (
                         <GitterKolonne
@@ -557,7 +561,7 @@ export default function AdminKalenderPage() {
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
                           dagOptaget={person.type === 'vikar'
-                            ? tilgaengelighed.filter(t => t.substitute_id === person.id && t.date === dagStr)
+                            ? tilgaengelighed.filter(t => Number(t.substitute_id) === Number(person.id) && t.date === dagStr)
                             : []}
                           onLektionKlik={(l) => aabneLektion(l, tildelinger.find(t => t.lesson_id === l.id))}
                         />

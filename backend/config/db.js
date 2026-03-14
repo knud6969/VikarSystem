@@ -1,5 +1,9 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Returner PostgreSQL DATE som streng i stedet for JavaScript Date-objekt
+// Dette sikrer at datosammenligninger som f.end_date >= '2026-03-13' virker korrekt
+types.setTypeParser(1082, (val) => val); // DATE → streng 'YYYY-MM-DD'
 
 const pool = new Pool({
   user:     process.env.DB_USER,
