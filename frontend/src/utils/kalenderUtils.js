@@ -32,12 +32,6 @@ export function formatDagLabel(dato) {
   return dato.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
 }
 
-export function formatUgeLabel(mandag, fredag) {
-  const fra = mandag.toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
-  const til = fredag.toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
-  return `${fra} – ${til}`;
-}
-
 export function beregnPosition(startTime, endTime, timePx = 64) {
   const start = new Date(startTime);
   const slut  = new Date(endTime);
@@ -46,18 +40,6 @@ export function beregnPosition(startTime, endTime, timePx = 64) {
   const top    = (startMinutter / 60) * timePx;
   const height = Math.max(((slutMinutter - startMinutter) / 60) * timePx, 20);
   return { top, height };
-}
-
-export function lektionerForDag(lektioner, dato) {
-  const dagStr = dagTilStreng(dato);
-  return lektioner.filter(l =>
-    dagTilStreng(new Date(l.start_time)) === dagStr
-  );
-}
-
-export function fravaerForDag(fravaer, dato) {
-  const dagStr = dagTilStreng(dato);
-  return fravaer.filter(f => f.start_date <= dagStr && f.end_date >= dagStr);
 }
 
 export function getUgenummer(dato) {

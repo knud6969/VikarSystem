@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { vikarService } from '../api/vikarService';
 import { tilgaengelighedService } from '../api/tilgaengelighedService';
@@ -161,10 +161,18 @@ export default function VikarTilgaengelighedPage() {
     const blokHeight = minToY(slutMin) - blokTop;
     const relY       = y - blokTop;
 
+    // Brug mode fra BlokKomponent hvis tilgængeligt (beregnet via getBoundingClientRect)
+    // Ellers fallback til relY beregning
     let mode;
-    if (relY <= HANDLE_PX)                   mode = 'top';
-    else if (relY >= blokHeight - HANDLE_PX) mode = 'bottom';
-    else                                      mode = 'move';
+    if (e._blokMode) {
+      mode = e._blokMode;
+    } else if (relY <= HANDLE_PX) {
+      mode = 'top';
+    } else if (relY >= blokHeight - HANDLE_PX) {
+      mode = 'bottom';
+    } else {
+      mode = 'move';
+    }
 
     let curStart = startMin, curSlut = slutMin, startY = y, hasMoved = false;
     dragRef.current = { curStart, curSlut };
@@ -309,60 +317,29 @@ export default function VikarTilgaengelighedPage() {
                     ))}
 
                     {dagBlokke.map(blok => {
-                      const sMin   = strToMin(blok.start_time.slice(0,5));
-                      const eMin   = strToMin(blok.end_time.slice(0,5));
-                      const top    = minToY(sMin);
-                      const height = Math.max(minToY(eMin) - top, 24);
+                      const sMin    = strToMin(blok.start_time.slice(0,5));
+                      const eMin    = strToMin(blok.end_time.slice(0,5));
+                      const top     = minToY(sMin);
+                      const height  = Math.max(minToY(eMin) - top, 24);
                       const erAktiv = aktivId === blok.id;
 
                       return (
-                        <div key={blok.id}
-                          className="absolute left-1 right-1 rounded-lg overflow-hidden group z-20"
-                          style={{
-                            top: top + 1, height: height - 2,
-                            backgroundColor: 'rgba(239,68,68,0.13)',
-                            border: `1.5px solid ${erAktiv ? '#EF4444' : '#FCA5A5'}`,
-                            boxShadow: erAktiv ? '0 0 0 2px rgba(239,68,68,0.2)' : undefined,
-                          }}
+                        <BlokKomponent
+                          key={blok.id}
+                          blok={blok}
+                          top={top}
+                          height={height}
+                          erAktiv={erAktiv}
+                          sMin={sMin}
+                          eMin={eMin}
+                          handlePx={HANDLE_PX}
                           onMouseDown={e => handleBlokMouseDown(e, blok, i)}
-                        >
-                          {/* Top resize zone */}
-                          <div className="absolute top-0 left-0 right-0 cursor-n-resize z-30" style={{ height: HANDLE_PX }} />
-
-                          {/* Indhold */}
-                          <div className="px-2 pt-1 pb-2 pointer-events-none">
-                            <p className="text-xs font-semibold text-red-600 leading-tight">Utilgængelig</p>
-                            {height > 32 && (
-                              <p className="text-xs text-red-400">{minToStr(sMin)} – {minToStr(eMin)}</p>
-                            )}
-                            {height > 48 && blok.kommentar && (
-                              <p className="text-xs text-red-400 italic truncate">{blok.kommentar}</p>
-                            )}
-                          </div>
-
-                          {/* × slet */}
-                          <button
-                            className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-100 text-red-400 hover:bg-red-200 hover:text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-30"
-                            style={{ fontSize: '10px', lineHeight: 1 }}
-                            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
-                            onClick={e => { e.stopPropagation(); slet(blok); }}
-                          >
-                            ×
-                          </button>
-
-                          {/* Bottom resize zone */}
-                          <div
-                            className="absolute bottom-0 left-0 right-0 cursor-s-resize z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ height: HANDLE_PX, backgroundColor: 'rgba(239,68,68,0.15)' }}
-                            onMouseDown={e => {
-                              e.stopPropagation();
-                              // Force bottom mode
-                              handleBlokMouseDown({ ...e, _forceBottom: true }, blok, i);
-                            }}
-                          >
-                            <div className="w-8 h-0.5 rounded-full bg-red-300" />
-                          </div>
-                        </div>
+                          onSlet={e => { e.stopPropagation(); slet(blok); }}
+                          onKlik={() => {
+                            setAktivId(blok.id);
+                            setKommentar(blok.kommentar || '');
+                          }}
+                        />
                       );
                     })}
                   </div>
@@ -411,6 +388,91 @@ export default function VikarTilgaengelighedPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * BlokKomponent — én utilgængeligheds-blok i kalenderen.
+ * Cursor skifter dynamisk baseret på museposition:
+ *   - Øverste 10px: n-resize (juster starttid)
+ *   - Nederste 10px: s-resize (juster sluttid)
+ *   - Midten: grab → grabbing (flyt hele blokken)
+ */
+function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMouseDown, onSlet }) {
+  const ref = React.useRef(null);
+  const [cursor, setCursor] = React.useState('grab');
+
+  function getMode(e) {
+    if (!ref.current) return 'move';
+    const rect = ref.current.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    if (relY <= handlePx)               return 'top';
+    if (relY >= rect.height - handlePx) return 'bottom';
+    return 'move';
+  }
+
+  function handleMouseMove(e) {
+    const mode = getMode(e);
+    if (mode === 'top')    setCursor('n-resize');
+    else if (mode === 'bottom') setCursor('s-resize');
+    else                   setCursor('grab');
+  }
+
+  function handleMouseDown(e) {
+    // Beregn mode her og send det med så handleBlokMouseDown altid får korrekt mode
+    const mode = getMode(e);
+    // Override: sæt en custom property på eventet som handleBlokMouseDown kan bruge
+    e._blokMode = mode;
+    onMouseDown(e);
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="absolute left-1 right-1 rounded-lg overflow-hidden group z-20 select-none"
+      style={{
+        top: top + 1,
+        height: height - 2,
+        backgroundColor: 'rgba(239,68,68,0.13)',
+        border: `1.5px solid ${erAktiv ? '#EF4444' : '#FCA5A5'}`,
+        boxShadow: erAktiv ? '0 0 0 2px rgba(239,68,68,0.2)' : undefined,
+        cursor,
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => setCursor('grab')}
+      onMouseDown={handleMouseDown}
+    >
+      <div className="px-2 pt-1 pb-2 pointer-events-none">
+        <p className="text-xs font-semibold text-red-600 leading-tight">Utilgængelig</p>
+        {height > 32 && (
+          <p className="text-xs text-red-400">{minToStr(sMin)} – {minToStr(eMin)}</p>
+        )}
+        {height > 48 && blok.kommentar && (
+          <p className="text-xs text-red-400 italic truncate">{blok.kommentar}</p>
+        )}
+      </div>
+
+      <button
+        className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-100 text-red-400 hover:bg-red-200 hover:text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-30"
+        style={{ fontSize: '10px', lineHeight: 1, cursor: 'pointer' }}
+        onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+        onClick={onSlet}
+      >
+        ×
+      </button>
+
+      {/* Top resize indikator */}
+      <div className="absolute top-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex justify-center"
+        style={{ height: handlePx, background: 'linear-gradient(to bottom, rgba(239,68,68,0.25), transparent)' }}>
+        <div className="w-8 h-0.5 rounded-full bg-red-400 mt-1" />
+      </div>
+
+      {/* Bottom resize indikator */}
+      <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center"
+        style={{ height: handlePx, background: 'linear-gradient(to top, rgba(239,68,68,0.25), transparent)' }}>
+        <div className="w-8 h-0.5 rounded-full bg-red-400 mb-1" />
+      </div>
     </div>
   );
 }

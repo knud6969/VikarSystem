@@ -12,16 +12,6 @@ const FravaerModel = {
     return result.rows;
   },
 
-  async getById(id) {
-    const result = await pool.query(`
-      SELECT f.*, la.name AS laerer_navn
-      FROM fravaer f
-      JOIN laerere la ON la.id = f.teacher_id
-      WHERE f.id = $1
-    `, [id]);
-    return result.rows[0] || null;
-  },
-
   /**
    * Opretter fravær og markerer relevante lektioner som 'udækket'.
    * Kører i én transaktion.
@@ -101,8 +91,11 @@ const FravaerModel = {
       if (!fravaer) throw new Error('Fravær ikke fundet');
 
       // Sæt end_date til I GÅR så læreren ikke fremstår fraværende resten af i dag
+      // Sæt end_date til dagen FØR raskmelding eller dagen FØR fraværets start
+      // (det mindste af de to) — sikrer at fraværet ikke fremstår aktivt
+      // på nogen kalenderdag efter raskmelding.
       await client.query(
-        "UPDATE fravaer SET end_date = CURRENT_DATE - 1 WHERE id = $1",
+        "UPDATE fravaer SET end_date = LEAST(CURRENT_DATE - 1, start_date - 1) WHERE id = $1",
         [id]
       );
 

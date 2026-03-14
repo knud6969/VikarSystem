@@ -33,40 +33,6 @@ const LektionModel = {
   },
 
   /**
-   * Markerer alle lektioner som 'udækket' for en lærer i en given periode.
-   * Bruges når admin registrerer fravær (User Story 1 + 2).
-   */
-  async markerUdaekketForLaerer(teacher_id, startDate, endDate) {
-    const result = await pool.query(`
-      UPDATE lektioner
-      SET status = 'udækket'
-      WHERE teacher_id = $1
-        AND DATE(start_time) >= $2
-        AND DATE(start_time) <= $3
-        AND status = 'normal'
-      RETURNING *
-    `, [teacher_id, startDate, endDate]);
-    return result.rows;
-  },
-
-  /**
-   * Normaliserer fremtidige lektioner tilbage til 'normal' ved raskmeldning.
-   * Behold lektioner der allerede er 'dækket' (de har en vikar).
-   * (User Story 5)
-   */
-  async normaliserFremtidigeForLaerer(teacher_id) {
-    const result = await pool.query(`
-      UPDATE lektioner
-      SET status = 'normal'
-      WHERE teacher_id = $1
-        AND start_time  > NOW()
-        AND status      = 'udækket'
-      RETURNING *
-    `, [teacher_id]);
-    return result.rows;
-  },
-
-  /**
    * Henter lektioner tildelt en specifik vikar.
    * Bruges i vikar-interfacet (mine lektioner).
    */
@@ -83,14 +49,6 @@ const LektionModel = {
       ORDER BY l.start_time
     `, [vikarId]);
     return result.rows;
-  },
-
-  async opdaterStatus(id, status) {
-    const result = await pool.query(
-      'UPDATE lektioner SET status = $1 WHERE id = $2 RETURNING *',
-      [status, id]
-    );
-    return result.rows[0] || null;
   },
 
   async delete(id) {

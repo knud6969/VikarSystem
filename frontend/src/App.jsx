@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import AdminKalenderPage from './pages/AdminKalenderPage';
 import VikarLektionerPage from './pages/VikarLektionerPage';
 import VikarTilgaengelighedPage from './pages/VikarTilgaengelighedPage';
+import LaererLektionerPage from './pages/LaererLektionerPage';
 import { UautorisPage } from './pages/PlaceholderPages';
 
 export default function App() {
@@ -13,9 +14,10 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login"        element={<LoginPage />} />
           <Route path="/uautoriseret" element={<UautorisPage />} />
 
+          {/* Admin */}
           <Route
             path="/admin"
             element={
@@ -28,6 +30,7 @@ export default function App() {
             <Route path="kalender" element={<AdminKalenderPage />} />
           </Route>
 
+          {/* Vikar */}
           <Route
             path="/vikar"
             element={
@@ -39,6 +42,19 @@ export default function App() {
             <Route index element={<Navigate to="lektioner" replace />} />
             <Route path="lektioner"       element={<VikarLektionerPage />} />
             <Route path="tilgaengelighed" element={<VikarTilgaengelighedPage />} />
+          </Route>
+
+          {/* Lærer */}
+          <Route
+            path="/laerer"
+            element={
+              <ProtectedRoute rolle="laerer">
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="lektioner" replace />} />
+            <Route path="lektioner" element={<LaererLektionerPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />

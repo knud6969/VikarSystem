@@ -3,7 +3,6 @@ import { fravaerService } from '../../api/fravaerService';
 import { useApi } from '../../hooks/useApi';
 import { ModalWrapper } from './SygemeldingModal';
 import ErrorMessage from '../common/ErrorMessage';
-import { dagTilStreng } from '../../utils/kalenderUtils';
 
 /**
  * RaskmeldingModal — afslutter aktivt fravær for en lærer.
@@ -17,8 +16,6 @@ export default function RaskmeldingModal({ laerer, onTilbage, onSuccess }) {
   const [fejl,    setFejl]    = useState('');
 
   const { data: fravaerListe } = useApi(fravaerService.getAll, []);
-
-  const idagStr = dagTilStreng(new Date());
 
   // Find aktivt fravær: start_date <= i dag OG end_date >= i går
   // >= i går fordi afslutMedLektioner sætter end_date = CURRENT_DATE - 1

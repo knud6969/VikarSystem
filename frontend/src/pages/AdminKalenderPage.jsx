@@ -473,8 +473,9 @@ export default function AdminKalenderPage() {
                 : gitterKolonner.map(({ person }) => {
                     const nøgle     = `${person.type}-${person.id}`;
                     const erValgt   = valgtPersonId === nøgle;
-                    const erFravaer = person.type === 'laerer' && dagFravaer.some(
-                      f => Number(f.teacher_id) === Number(person.id)
+                    const erFravaer = person.type === 'laerer' && (
+                      person.status !== 'aktiv' &&
+                      dagFravaer.some(f => Number(f.teacher_id) === Number(person.id))
                     );
 
                     return (
@@ -549,8 +550,9 @@ export default function AdminKalenderPage() {
                         if (person.type === 'laerer') return l.teacher_id === person.id;
                         return tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === person.id);
                       });
-                      const erFravaer = person.type === 'laerer' && dagFravaer.some(
-                      f => Number(f.teacher_id) === Number(person.id)
+                      const erFravaer = person.type === 'laerer' && (
+                      person.status !== 'aktiv' &&
+                      dagFravaer.some(f => Number(f.teacher_id) === Number(person.id))
                     );
 
                       return (
@@ -616,12 +618,11 @@ export default function AdminKalenderPage() {
         <SygemeldingModal
           laerer={sygemeldModal}
           onTilbage={gaaTilbageTilPersonModal}
-          onSuccess={() => {
+          onSuccess={async () => {
             setSygemeldModal(null);
-            refetch();
-            refetchLaerere();
-            // Genåbn PersonModal — status opdateres via alleLaerere re-render
-            if (activPerson) setPersonModal(activPerson);
+            setPersonModal(null);
+            setActivPerson(null);
+            await Promise.all([refetch(), refetchLaerere()]);
           }}
         />
       )}
@@ -630,12 +631,12 @@ export default function AdminKalenderPage() {
         <RaskmeldingModal
           laerer={raskmeldModal}
           onTilbage={gaaTilbageTilPersonModal}
-          onSuccess={() => {
+          onSuccess={async () => {
             setRaskmeldModal(null);
-            refetch();
-            refetchLaerere();
-            // Genåbn PersonModal — status opdateres via alleLaerere re-render
-            if (activPerson) setPersonModal(activPerson);
+            // Luk PersonModal og opdater data — lad ikke stale data vises
+            setPersonModal(null);
+            setActivPerson(null);
+            await Promise.all([refetch(), refetchLaerere()]);
           }}
         />
       )}
