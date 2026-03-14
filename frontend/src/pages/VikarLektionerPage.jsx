@@ -4,6 +4,7 @@ import { lektionService } from '../api/lektionService';
 import { vikarService } from '../api/vikarService';
 import { useApi } from '../hooks/useApi';
 import BeskedModal from '../components/beskeder/BeskedModal';
+import { fetchLektionerMedBeskeder } from '../api/beskedFetch';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import {
@@ -17,22 +18,13 @@ import {
   DAGE,
 } from '../utils/kalenderUtils';
 
-const API        = import.meta.env.VITE_API_URL ?? '';
 const TIME_PX    = 64;
 const COL_W      = 200;
 const TIME_COL_W = 48;
 const HEADER_H   = 72;
 const TIMER      = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
 
-async function fetchLektionerMedBeskeder(ids) {
-  if (!ids.length) return [];
-  const res = await fetch(
-    `${API}/beskeder/lektioner-med-beskeder?ids=${ids.join(',')}`,
-    { credentials: 'include' }
-  );
-  if (!res.ok) return [];
-  return res.json();
-}
+
 
 export default function VikarLektionerPage() {
   useAuth();

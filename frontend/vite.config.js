@@ -5,7 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // Proxy API-kald til backend under udvikling
     proxy: {
       '/auth':            'http://localhost:3000',
       '/laerere':         'http://localhost:3000',
@@ -14,6 +13,7 @@ export default defineConfig({
       '/fravaer':         'http://localhost:3000',
       '/tildelinger':     'http://localhost:3000',
       '/tilgaengelighed': 'http://localhost:3000',
+      '/beskeder':        'http://localhost:3000',  // ← NY
     },
   },
 });

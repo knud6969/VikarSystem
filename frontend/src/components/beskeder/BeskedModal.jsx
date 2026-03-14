@@ -3,8 +3,18 @@ import { useAuth } from '../../context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL ?? '';
 
+function authHeaders() {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 async function hentBeskeder(lessonId) {
-  const res = await fetch(`${API}/beskeder/lektion/${lessonId}`, { credentials: 'include' });
+  const res = await fetch(`${API}/beskeder/lektion/${lessonId}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error('Kunne ikke hente beskeder');
   return res.json();
 }
@@ -12,22 +22,13 @@ async function hentBeskeder(lessonId) {
 async function sendBesked(lessonId, indhold) {
   const res = await fetch(`${API}/beskeder/lektion/${lessonId}`, {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ indhold }),
   });
   if (!res.ok) throw new Error('Kunne ikke sende besked');
   return res.json();
 }
 
-/**
- * BeskedModal — chat-tråd per lektion.
- * Bruges af både LaererLektionerPage og VikarLektionerPage.
- *
- * Props:
- *   lektion  — lektion-objekt (id, subject, klasse_navn, start_time, …)
- *   onLuk    — callback til at lukke modalen
- */
 export default function BeskedModal({ lektion, onLuk }) {
   const { bruger } = useAuth();
   const [beskeder, setBeskeder]   = useState([]);
@@ -47,7 +48,6 @@ export default function BeskedModal({ lektion, onLuk }) {
     return () => { aktiv = false; };
   }, [lektion.id]);
 
-  // Scroll til bunden når nye beskeder ankommer
   useEffect(() => {
     bundRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [beskeder]);
@@ -59,7 +59,6 @@ export default function BeskedModal({ lektion, onLuk }) {
     setSender(true);
     try {
       const nyBesked = await sendBesked(lektion.id, tekst);
-      // Optimistisk: tilføj lokalt med afsender-info
       setBeskeder(prev => [...prev, {
         ...nyBesked,
         afsender_rolle: bruger.rolle,
@@ -82,13 +81,10 @@ export default function BeskedModal({ lektion, onLuk }) {
   }
 
   const start = new Date(lektion.start_time);
-  const datoStr = start.toLocaleDateString('da-DK', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
-  const tidStr = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+  const datoStr = start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+  const tidStr  = start.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
@@ -97,7 +93,6 @@ export default function BeskedModal({ lektion, onLuk }) {
       <div className="bg-white rounded-2xl shadow-2xl flex flex-col"
         style={{ width: 420, maxHeight: '80vh' }}>
 
-        {/* Header */}
         <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p className="font-semibold text-slate-900 text-sm">{lektion.subject}</p>
@@ -107,11 +102,8 @@ export default function BeskedModal({ lektion, onLuk }) {
             className="text-slate-300 hover:text-slate-500 text-xl leading-none ml-3 mt-0.5">×</button>
         </div>
 
-        {/* Besked-liste */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-          {loading && (
-            <p className="text-center text-xs text-slate-400 py-8">Henter beskeder…</p>
-          )}
+          {loading && <p className="text-center text-xs text-slate-400 py-8">Henter beskeder…</p>}
           {!loading && beskeder.length === 0 && (
             <div className="text-center py-8">
               <p className="text-2xl mb-2">💬</p>
@@ -120,28 +112,20 @@ export default function BeskedModal({ lektion, onLuk }) {
             </div>
           )}
           {beskeder.map(b => {
-            const erMig = b.afsender_id === bruger?.id;
-            const rolle = b.afsender_rolle === 'laerer' ? 'Lærer' : 'Vikar';
-            const tidspunkt = new Date(b.created_at).toLocaleTimeString('da-DK', {
-              hour: '2-digit', minute: '2-digit',
-            });
+            const erMig     = b.afsender_id === bruger?.id;
+            const rolle     = b.afsender_rolle === 'laerer' ? 'Lærer' : 'Vikar';
+            const tidspunkt = new Date(b.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
             return (
               <div key={b.id} className={`flex flex-col ${erMig ? 'items-end' : 'items-start'}`}>
                 <div className={`flex items-center gap-1.5 mb-1 ${erMig ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-xs font-medium text-slate-600">
-                    {erMig ? 'Dig' : b.afsender_navn}
-                  </span>
+                  <span className="text-xs font-medium text-slate-600">{erMig ? 'Dig' : b.afsender_navn}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                    b.afsender_rolle === 'laerer'
-                      ? 'bg-violet-100 text-violet-600'
-                      : 'bg-emerald-100 text-emerald-600'
+                    b.afsender_rolle === 'laerer' ? 'bg-violet-100 text-violet-600' : 'bg-emerald-100 text-emerald-600'
                   }`}>{rolle}</span>
                   <span className="text-xs text-slate-300">{tidspunkt}</span>
                 </div>
                 <div className={`rounded-2xl px-3.5 py-2.5 max-w-xs text-sm leading-snug whitespace-pre-wrap ${
-                  erMig
-                    ? 'bg-slate-800 text-white rounded-br-sm'
-                    : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                  erMig ? 'bg-slate-800 text-white rounded-br-sm' : 'bg-slate-100 text-slate-800 rounded-bl-sm'
                 }`}>
                   {b.indhold}
                 </div>
@@ -152,7 +136,6 @@ export default function BeskedModal({ lektion, onLuk }) {
           <div ref={bundRef} />
         </div>
 
-        {/* Skriv besked */}
         <div className="px-4 py-3 border-t border-slate-100">
           <form onSubmit={handleSend} className="flex items-end gap-2">
             <textarea
@@ -165,11 +148,8 @@ export default function BeskedModal({ lektion, onLuk }) {
               disabled={sender}
               className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300 transition disabled:opacity-50"
             />
-            <button
-              type="submit"
-              disabled={sender || !indhold.trim()}
-              className="shrink-0 w-9 h-9 rounded-xl bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 transition disabled:opacity-40"
-            >
+            <button type="submit" disabled={sender || !indhold.trim()}
+              className="shrink-0 w-9 h-9 rounded-xl bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 transition disabled:opacity-40">
               {sender ? (
                 <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
