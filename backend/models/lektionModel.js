@@ -45,7 +45,6 @@ const LektionModel = {
       JOIN laerere la     ON la.id = l.teacher_id
       JOIN klasser k      ON k.id  = l.class_id
       WHERE ti.substitute_id = $1
-        AND l.start_time >= NOW()
       ORDER BY l.start_time
     `, [vikarId]);
     return result.rows;

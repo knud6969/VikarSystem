@@ -9,7 +9,7 @@ const TilgaengelighedModel = {
     const result = await pool.query(`
       SELECT * FROM tilgaengelighed
       WHERE substitute_id = $1
-        AND date >= CURRENT_DATE
+        AND status = 'optaget'
       ORDER BY date, start_time
     `, [vikarId]);
     return result.rows;
@@ -50,7 +50,6 @@ const TilgaengelighedModel = {
       FROM tilgaengelighed t
       JOIN vikarer v ON v.id = t.substitute_id
       WHERE t.status = 'optaget'
-        AND t.date >= CURRENT_DATE
       ORDER BY t.date, t.start_time
     `);
     return result.rows;

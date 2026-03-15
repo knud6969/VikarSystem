@@ -12,7 +12,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 const TIME_PX    = 64;
 const COL_W      = 200;
 const TIME_COL_W = 48;
-const HEADER_H   = 72;
+const HEADER_H   = 88;
 const SNAP       = 15;
 const HANDLE_PX  = 10;
 const TIMER      = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
@@ -276,25 +276,24 @@ export default function VikarTilgaengelighedPage() {
         </div>
 
         {/* Dag-kolonner */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden min-w-0 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
           <div className="flex shrink-0 border-b border-slate-200 bg-white sticky top-0 z-20"
-            style={{ width: ugedage.length * COL_W, height: HEADER_H }}>
+style={{ height: HEADER_H }}>
             {ugedage.map((dag, i) => {
               const erIdag = dagTilStreng(dag) === idagStr;
               return (
-                <div key={i} style={{ width: COL_W, minWidth: COL_W }}
-                  className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0">
-                  <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : 'text-slate-500'}`}>{DAGE[i].slice(0,3)}</p>
+                <div key={i} className="flex-1 flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0 py-2">
+                  <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : 'text-slate-500'}`}>{DAGE[i]}</p>
                   <p className={`text-2xl font-bold leading-tight ${erIdag ? 'text-blue-600' : 'text-slate-800'}`}>{dag.getDate()}</p>
-                  <p className="text-xs text-slate-400">{dag.toLocaleDateString('da-DK', { month: 'short' })}</p>
+                  <p className="text-xs text-slate-400 capitalize">{dag.toLocaleDateString('da-DK', { month: 'long' })}</p>
                 </div>
               );
             })}
           </div>
 
           <div ref={yScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden"
-            onScroll={handleYScroll} style={{ width: ugedage.length * COL_W }}>
-            <div className="flex" style={{ width: ugedage.length * COL_W, height: TIMER.length * TIME_PX }}>
+onScroll={handleYScroll}>
+<div className="flex flex-1" style={{ height: TIMER.length * TIME_PX }}>
               {ugedage.map((dag, i) => {
                 const dagStr    = dagTilStreng(dag);
                 const erIdag    = dagStr === idagStr;
@@ -303,8 +302,8 @@ export default function VikarTilgaengelighedPage() {
                 return (
                   <div key={i}
                     ref={el => colRefs.current[i] = el}
-                    className={`relative border-r border-slate-200 last:border-r-0 shrink-0 select-none cursor-default ${erIdag ? 'bg-blue-50/20' : ''}`}
-                    style={{ width: COL_W, height: TIMER.length * TIME_PX }}
+                    className={`flex-1 relative border-r border-slate-200 last:border-r-0 select-none cursor-default ${erIdag ? 'bg-blue-50/20' : ''}`}
+style={{ height: TIMER.length * TIME_PX }}
                     onDoubleClick={e => handleDblClick(e, i)}
                   >
                     {TIMER.map(t => (

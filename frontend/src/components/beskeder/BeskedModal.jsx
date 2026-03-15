@@ -143,7 +143,7 @@ export default function BeskedModal({ lektion, onLuk }) {
               value={indhold}
               onChange={e => setIndhold(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Skriv en besked… (Enter sender)"
+              placeholder="Skriv en besked…"
               rows={2}
               disabled={sender}
               className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-300 transition disabled:opacity-50"

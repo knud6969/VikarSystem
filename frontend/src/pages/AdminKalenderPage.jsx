@@ -446,7 +446,7 @@ export default function AdminKalenderPage() {
                 ? ugedage.map((dag, i) => {
                     const dagStr = dagTilStreng(dag);
                     const erIdag = dagStr === idagStr;
-                    const dagFravaerUge = fravaer.filter(f => String(f.start_date).slice(0,10) <= dagStr && String(f.end_date).slice(0,10) >= dagStr && Number(f.teacher_id) === Number(ugePerson.id));
+                    const dagFravaerUge = ugePerson.type === 'laerer' ? fravaer.filter(f => String(f.start_date).slice(0,10) <= dagStr && String(f.end_date).slice(0,10) >= dagStr && Number(f.teacher_id) === Number(ugePerson.id)) : [];
 
                     return (
                       <div

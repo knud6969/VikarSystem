@@ -10,11 +10,18 @@ const VIKAR_LINKS = [
   { to: '/vikar/tilgaengelighed', label: 'Min tilgængelighed' },
 ];
 
+const LAERER_LINKS = [
+  { to: '/laerer/lektioner', label: 'Mine lektioner' },
+];
+
 export default function AppLayout() {
   const { bruger, logout } = useAuth();
   const navigate = useNavigate();
 
-  const links = bruger?.rolle === 'admin' ? ADMIN_LINKS : VIKAR_LINKS;
+  const links =
+    bruger?.rolle === 'admin'  ? ADMIN_LINKS  :
+    bruger?.rolle === 'laerer' ? LAERER_LINKS :
+    VIKAR_LINKS;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">

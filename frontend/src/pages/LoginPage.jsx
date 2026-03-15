@@ -18,7 +18,11 @@ export default function LoginPage() {
 
     try {
       const bruger = await login(email, password);
-      navigate(bruger.rolle === 'admin' ? '/admin/kalender' : '/vikar/lektioner', { replace: true });
+      const destination =
+        bruger.rolle === 'admin'  ? '/admin/kalender' :
+        bruger.rolle === 'laerer' ? '/laerer/lektioner' :
+        '/vikar/lektioner';
+      navigate(destination, { replace: true });
     } catch (err) {
       setFejl(err.message || 'Login mislykkedes');
     } finally {

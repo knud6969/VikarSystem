@@ -11,17 +11,6 @@ const STATUS_LABELS = {
   aktiv: 'Aktiv', syg: 'Syg', fraværende: 'Fraværende', ledig: 'Ledig',
 };
 
-/**
- * PersonModal — vises ved klik på en persons avatar i kalender-headeren.
- *
- * Props:
- *   person         — { id, name, type: 'laerer'|'vikar', status, farve, email?, phone? }
- *   dagFravaer     — liste af aktive fravær denne dag
- *   onLuk          — lukker modalen
- *   onSygemelding  — åbner sygemeldingsflow (kun lærere)
- *   onRaskmelding  — åbner raskmeldingsflow (kun lærere)
- *   onUgeoversigt  — skifter til enkelt-person ugeoversigt
- */
 export default function PersonModal({
   person,
   dagFravaer,
@@ -30,56 +19,37 @@ export default function PersonModal({
   onRaskmelding,
   onUgeoversigt,
 }) {
-  // Luk ved Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onLuk(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onLuk]);
 
-  const erLaerer     = person.type === 'laerer';
+  const erLaerer      = person.type === 'laerer';
   const erFravaerende = erLaerer && person.status !== 'aktiv';
-  const statusStyle  = STATUS_STYLES[person.status] ?? STATUS_STYLES.aktiv;
-  const initialer    = person.name.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2);
+  const statusStyle   = STATUS_STYLES[person.status] ?? STATUS_STYLES.aktiv;
+  const initialer     = person.name.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
-        onClick={onLuk}
-      />
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={onLuk} />
 
-      {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-100">
 
-        {/* Header med farvet avatar */}
+        {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-start gap-4">
-          <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0 ${person.farve}`}
-          >
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0 ${person.farve}`}>
             {initialer}
           </div>
-
           <div className="flex-1 min-w-0 pt-0.5">
-            <h2 className="text-base font-semibold text-slate-900 leading-tight truncate">
-              {person.name}
-            </h2>
+            <h2 className="text-base font-semibold text-slate-900 leading-tight truncate">{person.name}</h2>
             <p className="text-xs text-slate-400 mt-0.5 capitalize">
               {erLaerer ? 'Lærer' : 'Vikar'}
               {person.email && ` · ${person.email}`}
             </p>
-            {person.phone && (
-              <p className="text-xs text-slate-400">{person.phone}</p>
-            )}
+            {person.phone && <p className="text-xs text-slate-400">{person.phone}</p>}
           </div>
-
-          <button
-            onClick={onLuk}
-            className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0"
-          >
-            ×
-          </button>
+          <button onClick={onLuk} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0">×</button>
         </div>
 
         {/* Status badge */}
@@ -95,7 +65,7 @@ export default function PersonModal({
         {/* Handlinger */}
         <div className="px-4 py-4 space-y-2">
 
-          {/* Ugeoversigt — altid tilgængelig */}
+          {/* Ugeoversigt — altid */}
           <HandlingsKnap
             ikon="📅"
             label="Vis ugeoversigt"
@@ -104,7 +74,7 @@ export default function PersonModal({
             variant="primary"
           />
 
-          {/* Lærer-specifikke handlinger */}
+          {/* Lærer: sygemelding */}
           {erLaerer && !erFravaerende && (
             <HandlingsKnap
               ikon="🤒"
@@ -115,6 +85,7 @@ export default function PersonModal({
             />
           )}
 
+          {/* Lærer: raskmelding */}
           {erLaerer && erFravaerende && (
             <HandlingsKnap
               ikon="✅"
@@ -125,16 +96,7 @@ export default function PersonModal({
             />
           )}
 
-          {/* Vikar-specifikke handlinger */}
-          {!erLaerer && (
-            <HandlingsKnap
-              ikon="🗓"
-              label="Se tilgængelighed"
-              beskrivelse="Vikarens ledige tider"
-              onClick={() => {/* TODO */}}
-              variant="neutral"
-            />
-          )}
+          {/* Vikarer: ingen ekstra knapper */}
         </div>
       </div>
     </div>
