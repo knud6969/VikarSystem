@@ -11,32 +11,28 @@ const vikarer = [
 ];
 
 const laerere = [
-  { name: 'Anders Hansen'     },
-  { name: 'Mette Nielsen'     },
-  { name: 'Søren Pedersen'    },
-  { name: 'Lise Andersen'     },
-  { name: 'Peter Christensen' },
-  { name: 'Hanne Møller'      },
-  { name: 'Rasmus Berg'       },
-  { name: 'Trine Skov'        },
+  { name: 'Anders Hansen',     email: 'anders.hansen@skole.dk'     },
+  { name: 'Mette Nielsen',     email: 'mette.nielsen@skole.dk'     },
+  { name: 'Søren Pedersen',    email: 'soren.pedersen@skole.dk'    },
+  { name: 'Lise Andersen',     email: 'lise.andersen@skole.dk'     },
+  { name: 'Peter Christensen', email: 'peter.christensen@skole.dk' },
+  { name: 'Hanne Møller',      email: 'hanne.moller@skole.dk'      },
+  { name: 'Rasmus Berg',       email: 'rasmus.berg@skole.dk'       },
+  { name: 'Trine Skov',        email: 'trine.skov@skole.dk'        },
 ];
 
 const klasser = ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '5A', '6A'];
 const fag     = ['Dansk', 'Matematik', 'Engelsk', 'Naturfag', 'Historie', 'Idræt', 'Musik', 'Geografi', 'Billedkunst'];
 const lokaler = ['A1', 'A2', 'B3', 'B4', 'C1', 'Sal', 'Idrætsal'];
 
-// Realistisk dansk folkeskoleskema:
-// 45 min lektioner, 5 min pause mellem, stor pause kl. 10:00-10:15 og frokost 12:00-12:30
 const SLOTS = [
-  ['08:00', '08:45'],  // 1. lektion
-  ['08:50', '09:35'],  // 2. lektion
-  ['09:40', '10:25'],  // 3. lektion
-  // Pause 10:25-10:40
-  ['10:40', '11:25'],  // 4. lektion
-  ['11:30', '12:15'],  // 5. lektion
-  // Frokost 12:15-13:00
-  ['13:00', '13:45'],  // 6. lektion
-  ['13:50', '14:35'],  // 7. lektion
+  ['08:00', '08:45'],
+  ['08:50', '09:35'],
+  ['09:40', '10:25'],
+  ['10:40', '11:25'],
+  ['11:30', '12:15'],
+  ['13:00', '13:45'],
+  ['13:50', '14:35'],
 ];
 
 function getMandagDenne() {
@@ -68,17 +64,26 @@ async function seed() {
       klasseIds.push(res.rows[0].id);
     }
 
-    // Lærere
-    console.log('Opretter lærere…');
+    // Lærere med login
+    console.log('Opretter lærere med login…');
     const laererIds = [];
+    const laererHash = await bcrypt.hash('password123', 10);
     for (const l of laerere) {
-      const existing = await client.query('SELECT id FROM laerere WHERE name = $1', [l.name]);
+      const brugerRes = await client.query(
+        `INSERT INTO brugere (email, password_hash, rolle)
+         VALUES ($1, $2, 'laerer')
+         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash RETURNING id`,
+        [l.email, laererHash]
+      );
+      const userId = brugerRes.rows[0].id;
+
+      const existing = await client.query('SELECT id FROM laerere WHERE user_id = $1', [userId]);
       if (existing.rows.length > 0) {
         laererIds.push(existing.rows[0].id);
       } else {
         const res = await client.query(
-          `INSERT INTO laerere (name, status) VALUES ($1, 'aktiv') RETURNING id`,
-          [l.name]
+          `INSERT INTO laerere (user_id, name, status) VALUES ($1, $2, 'aktiv') RETURNING id`,
+          [userId, l.name]
         );
         laererIds.push(res.rows[0].id);
       }
@@ -87,15 +92,16 @@ async function seed() {
     // Vikarer
     console.log('Opretter vikarer med login…');
     const vikarIds = [];
-    const hash = await bcrypt.hash('vikar123', 10);
+    const vikarHash = await bcrypt.hash('vikar123', 10);
     for (const v of vikarer) {
       const brugerRes = await client.query(
         `INSERT INTO brugere (email, password_hash, rolle)
          VALUES ($1, $2, 'vikar')
          ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash RETURNING id`,
-        [v.email, hash]
+        [v.email, vikarHash]
       );
       const userId = brugerRes.rows[0].id;
+
       const existing = await client.query('SELECT id FROM vikarer WHERE user_id = $1', [userId]);
       if (existing.rows.length > 0) {
         vikarIds.push(existing.rows[0].id);
@@ -108,7 +114,7 @@ async function seed() {
       }
     }
 
-    // Lektioner — hver lærer får 4-6 tilfældige slots per dag
+    // Lektioner
     console.log('Opretter lektioner…');
     const mandag = getMandagDenne();
     let lektionerOprettet = 0;
@@ -120,9 +126,8 @@ async function seed() {
       for (let li = 0; li < laererIds.length; li++) {
         const laererId  = laererIds[li];
         const klasserId = klasseIds[li % klasseIds.length];
-        const antal     = 4 + Math.floor(Math.random() * 3); // 4-6 lektioner
-        // Vælg tilfældige unikke slots
-        const shuffled = [...SLOTS].sort(() => Math.random() - 0.5);
+        const antal     = 4 + Math.floor(Math.random() * 3);
+        const shuffled  = [...SLOTS].sort(() => Math.random() - 0.5);
         const valgteSlots = shuffled.slice(0, antal);
 
         for (const [start, slut] of valgteSlots) {
@@ -149,7 +154,7 @@ async function seed() {
     for (let dagOffset = 0; dagOffset < 5; dagOffset++) {
       const dag = new Date(mandag);
       dag.setDate(dag.getDate() + dagOffset);
-      const dagStr = dag.toISOString().slice(0, 10);
+      const dagStr = dag.toLocaleDateString('sv-SE');
       for (const vikarId of vikarIds) {
         await client.query(
           `INSERT INTO tilgaengelighed (substitute_id, date, start_time, end_time, status)
@@ -161,12 +166,15 @@ async function seed() {
     }
 
     await client.query('COMMIT');
+
     console.log(`\n✅ Færdig!\n`);
     console.log(`  ${klasser.length} klasser`);
     console.log(`  ${laerere.length} lærere`);
     console.log(`  ${vikarer.length} vikarer`);
     console.log(`  ${lektionerOprettet} lektioner\n`);
-    console.log('Vikar-logins (password: vikar123):');
+    console.log('Lærer-logins (password: password123):');
+    laerere.forEach(l => console.log(`  ${l.email}`));
+    console.log('\nVikar-logins (password: vikar123):');
     vikarer.forEach(v => console.log(`  ${v.email}`));
 
   } catch (err) {

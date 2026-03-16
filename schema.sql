@@ -1,18 +1,19 @@
 -- VikarSystem Database Schema
--- Kør i psql: psql -U postgres -d vikarsystem -f schema.sql
+-- Kør i Neon SQL Editor eller psql: psql -U postgres -d vikarsystem -f schema.sql
 
 -- ── Brugere ──────────────────────────────────────────────────
 CREATE TABLE brugere (
   id            SERIAL PRIMARY KEY,
   email         VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  rolle         VARCHAR(20)  NOT NULL CHECK (rolle IN ('admin', 'vikar')),
+  rolle         VARCHAR(20)  NOT NULL CHECK (rolle IN ('admin', 'vikar', 'laerer')),
   created_at    TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 
 -- ── Lærere ───────────────────────────────────────────────────
 CREATE TABLE laerere (
   id         SERIAL PRIMARY KEY,
+  user_id    INTEGER      REFERENCES brugere(id) ON DELETE SET NULL,
   name       VARCHAR(255) NOT NULL,
   status     VARCHAR(20)  NOT NULL DEFAULT 'aktiv'
                CHECK (status IN ('aktiv', 'syg', 'fraværende')),
@@ -51,14 +52,14 @@ CREATE TABLE lektioner (
 
 -- ── Fravær ───────────────────────────────────────────────────
 CREATE TABLE fravaer (
-  id           SERIAL PRIMARY KEY,
-  teacher_id   INTEGER    NOT NULL REFERENCES laerere(id) ON DELETE CASCADE,
-  type         VARCHAR(20) NOT NULL DEFAULT 'syg'
-                 CHECK (type IN ('syg', 'kursus', 'andet')),
-  start_date   DATE        NOT NULL,
-  end_date     DATE        NOT NULL,
-  oprettet_af  INTEGER     NOT NULL REFERENCES brugere(id),
-  created_at   TIMESTAMP   NOT NULL DEFAULT NOW()
+  id          SERIAL PRIMARY KEY,
+  teacher_id  INTEGER     NOT NULL REFERENCES laerere(id) ON DELETE CASCADE,
+  type        VARCHAR(20) NOT NULL DEFAULT 'syg'
+                CHECK (type IN ('syg', 'kursus', 'andet')),
+  start_date  DATE        NOT NULL,
+  end_date    DATE        NOT NULL,
+  oprettet_af INTEGER     NOT NULL REFERENCES brugere(id),
+  created_at  TIMESTAMP   NOT NULL DEFAULT NOW()
 );
 
 -- ── Tildelinger ──────────────────────────────────────────────
@@ -79,5 +80,15 @@ CREATE TABLE tilgaengelighed (
   end_time      TIME        NOT NULL,
   status        VARCHAR(20) NOT NULL DEFAULT 'ledig'
                   CHECK (status IN ('ledig', 'optaget')),
+  kommentar     VARCHAR(255),
   UNIQUE (substitute_id, date, start_time)
+);
+
+-- ── Beskeder ─────────────────────────────────────────────────
+CREATE TABLE beskeder (
+  id          SERIAL PRIMARY KEY,
+  lesson_id   INTEGER   NOT NULL REFERENCES lektioner(id) ON DELETE CASCADE,
+  afsender_id INTEGER   NOT NULL REFERENCES brugere(id)   ON DELETE CASCADE,
+  indhold     TEXT      NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
