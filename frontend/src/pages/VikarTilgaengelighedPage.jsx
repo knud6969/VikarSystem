@@ -10,29 +10,28 @@ import {
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const TIME_PX    = 64;
-const COL_W      = 200;
 const TIME_COL_W = 48;
 const HEADER_H   = 88;
 const SNAP       = 15;
 const HANDLE_PX  = 10;
 const TIMER      = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
 
-function snap(min)     { return Math.round(min / SNAP) * SNAP; }
-function minToStr(min) { return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`; }
-function strToMin(s)   { const [h,m] = s.split(':').map(Number); return h*60+m; }
-function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
-function yToMin(y)     { return snap(clamp((y/TIME_PX)*60 + TIMER_START*60, TIMER_START*60, TIMER_SLUT*60)); }
-function minToY(min)   { return ((min - TIMER_START*60)/60)*TIME_PX; }
+function snap(min)        { return Math.round(min / SNAP) * SNAP; }
+function minToStr(min)    { return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`; }
+function strToMin(s)      { const [h, m] = s.split(':').map(Number); return h * 60 + m; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function yToMin(y)        { return snap(clamp((y / TIME_PX) * 60 + TIMER_START * 60, TIMER_START * 60, TIMER_SLUT * 60)); }
+function minToY(min)      { return ((min - TIMER_START * 60) / 60) * TIME_PX; }
 
 let _uid = 0;
 function uid() { return `local-${++_uid}`; }
 
 export default function VikarTilgaengelighedPage() {
   const { bruger } = useAuth();
-  const [mandag, setMandag]       = useState(() => getMandagForUge());
-  const [lokale, setLokale]       = useState([]);
-  const [aktivId, setAktivId]     = useState(null);
-  const [kommentar, setKommentar] = useState('');
+  const [mandag, setMandag]         = useState(() => getMandagForUge());
+  const [lokale, setLokale]         = useState([]);
+  const [aktivId, setAktivId]       = useState(null);
+  const [kommentar, setKommentar]   = useState('');
   const [gemLoading, setGemLoading] = useState(false);
 
   const yScrollRef = useRef(null);
@@ -56,18 +55,6 @@ export default function VikarTilgaengelighedPage() {
       yScrollRef.current.scrollTop = (8 - TIMER_START) * TIME_PX - 16;
   }, [loading]);
 
-  // Fjern lokale blokke der nu er bekræftet på serveren
-  useEffect(() => {
-    if (!serverBlokke) return;
-    setLokale(prev => prev.filter(lokal =>
-      !serverBlokke.some(s =>
-        s.date === lokal.date &&
-        s.start_time.slice(0,5) === lokal.start_time.slice(0,5) &&
-        s.status === 'optaget'
-      )
-    ));
-  }, [serverBlokke]);
-
   const handleYScroll = useCallback((e) => {
     if (syncing.current) return;
     syncing.current = true;
@@ -76,7 +63,7 @@ export default function VikarTilgaengelighedPage() {
   }, []);
 
   function gaaTilUge(r) {
-    setMandag(prev => { const d = new Date(prev); d.setDate(d.getDate() + r*7); return d; });
+    setMandag(prev => { const d = new Date(prev); d.setDate(d.getDate() + r * 7); return d; });
     setAktivId(null);
   }
 
@@ -86,17 +73,27 @@ export default function VikarTilgaengelighedPage() {
     return e.clientY - col.getBoundingClientRect().top + (yScrollRef.current?.scrollTop || 0);
   }
 
+  // Server-blokke er autoriteten. Lokale blokke vises kun hvis der ikke
+  // allerede er en server-blok på samme dato+starttid.
+  const serverOptaget = (serverBlokke || []).filter(b => b.status === 'optaget');
+
   const alleBlokke = [
-    ...(serverBlokke || []).filter(b => b.status === 'optaget'),
-    ...lokale,
+    ...serverOptaget,
+    ...lokale.filter(lokal =>
+      !serverOptaget.some(s =>
+        s.date === lokal.date &&
+        s.start_time.slice(0, 5) === lokal.start_time.slice(0, 5)
+      )
+    ),
   ];
 
   function blokkeForDag(dagStr) {
     return alleBlokke.filter(b => b.date === dagStr);
   }
 
-  // ── Gem til server ─────────────────────────────────────────
-  async function gem(blok) {
+  // ── Opret ny blok ──────────────────────────────────────────
+  async function gemNy(blok) {
+    const fjernLokal = () => setLokale(prev => prev.filter(b => b.id !== blok.id));
     try {
       await tilgaengelighedService.saet({
         date:       blok.date,
@@ -105,25 +102,69 @@ export default function VikarTilgaengelighedPage() {
         status:     'optaget',
         kommentar:  blok.kommentar || null,
       });
+      fjernLokal();
       await refetch();
     } catch (err) {
       console.error('Gem fejlede:', err.message);
-      setLokale(prev => prev.filter(b => b.id !== blok.id));
+      fjernLokal();
+    }
+  }
+
+  // ── Flyt eksisterende blok ─────────────────────────────────
+  // Ved flyt SKAL den gamle blok slettes fra serveren, ellers
+  // efterlades den på sin gamle starttid (ON CONFLICT opretter en ny
+  // række — den gamle slettes ikke automatisk).
+  async function flyt(gammelBlok, nyStartTime, nyEndTime) {
+    try {
+      // Slet den gamle blok hvis den er gemt på serveren
+      if (gammelBlok.id && !String(gammelBlok.id).startsWith('local-')) {
+        await tilgaengelighedService.delete(gammelBlok.id);
+      }
+      // Gem den nye position
+      await tilgaengelighedService.saet({
+        date:       gammelBlok.date,
+        start_time: nyStartTime,
+        end_time:   nyEndTime,
+        status:     'optaget',
+        kommentar:  gammelBlok.kommentar || null,
+      });
+      await refetch();
+    } catch (err) {
+      console.error('Flyt fejlede:', err.message);
+      await refetch(); // Genindlæs så vi er i sync med serveren
     }
   }
 
   async function slet(blok) {
-    if (blok._local) { setLokale(prev => prev.filter(b => b.id !== blok.id)); return; }
-    try { await tilgaengelighedService.delete(blok.id); await refetch(); }
-    catch (err) { console.error(err); }
+    if (blok._local) {
+      setLokale(prev => prev.filter(b => b.id !== blok.id));
+      return;
+    }
+    try {
+      await tilgaengelighedService.delete(blok.id);
+      await refetch();
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   async function gemKommentar(blok) {
     setGemLoading(true);
     const opdateret = { ...blok, kommentar };
-    if (blok._local) setLokale(prev => prev.map(b => b.id === blok.id ? opdateret : b));
     setAktivId(null);
-    await gem(opdateret);
+    // Kommentar-opdatering er en saet() da vi ikke ændrer starttid
+    try {
+      await tilgaengelighedService.saet({
+        date:       opdateret.date,
+        start_time: opdateret.start_time,
+        end_time:   opdateret.end_time,
+        status:     'optaget',
+        kommentar:  kommentar || null,
+      });
+      await refetch();
+    } catch (err) {
+      console.error(err);
+    }
     setGemLoading(false);
   }
 
@@ -132,20 +173,28 @@ export default function VikarTilgaengelighedPage() {
     e.preventDefault();
     const y        = getY(e, dagIdx);
     const midtMin  = yToMin(y);
-    const startMin = clamp(midtMin - 30, TIMER_START*60, TIMER_SLUT*60 - 60);
+    const startMin = clamp(midtMin - 30, TIMER_START * 60, TIMER_SLUT * 60 - 60);
     const slutMin  = startMin + 60;
     const dato     = dagTilStreng(ugedage[dagIdx]);
 
-    // Ingen overlap
     const harOverlap = blokkeForDag(dato).some(b => {
-      const bS = strToMin(b.start_time.slice(0,5)), bE = strToMin(b.end_time.slice(0,5));
+      const bS = strToMin(b.start_time.slice(0, 5));
+      const bE = strToMin(b.end_time.slice(0, 5));
       return startMin < bE && slutMin > bS;
     });
     if (harOverlap) return;
 
-    const nyBlok = { id: uid(), date: dato, start_time: minToStr(startMin), end_time: minToStr(slutMin), status: 'optaget', kommentar: null, _local: true };
+    const nyBlok = {
+      id: uid(),
+      date: dato,
+      start_time: minToStr(startMin),
+      end_time: minToStr(slutMin),
+      status: 'optaget',
+      kommentar: null,
+      _local: true,
+    };
     setLokale(prev => [...prev, nyBlok]);
-    gem(nyBlok);
+    gemNy(nyBlok);
   }
 
   // ── Mouse-down på blok → drag ─────────────────────────────
@@ -155,30 +204,28 @@ export default function VikarTilgaengelighedPage() {
     e.preventDefault();
 
     const y          = getY(e, dagIdx);
-    const startMin   = strToMin(blok.start_time.slice(0,5));
-    const slutMin    = strToMin(blok.end_time.slice(0,5));
+    const startMin   = strToMin(blok.start_time.slice(0, 5));
+    const slutMin    = strToMin(blok.end_time.slice(0, 5));
     const blokTop    = minToY(startMin);
     const blokHeight = minToY(slutMin) - blokTop;
     const relY       = y - blokTop;
 
-    // Brug mode fra BlokKomponent hvis tilgængeligt (beregnet via getBoundingClientRect)
-    // Ellers fallback til relY beregning
     let mode;
-    if (e._blokMode) {
-      mode = e._blokMode;
-    } else if (relY <= HANDLE_PX) {
-      mode = 'top';
-    } else if (relY >= blokHeight - HANDLE_PX) {
-      mode = 'bottom';
-    } else {
-      mode = 'move';
-    }
+    if (e._blokMode)                         mode = e._blokMode;
+    else if (relY <= HANDLE_PX)              mode = 'top';
+    else if (relY >= blokHeight - HANDLE_PX) mode = 'bottom';
+    else                                     mode = 'move';
 
-    let curStart = startMin, curSlut = slutMin, startY = y, hasMoved = false;
+    let curStart = startMin, curSlut = slutMin;
+    let startY = y, hasMoved = false;
     dragRef.current = { curStart, curSlut };
 
     document.body.style.cursor     = mode === 'move' ? 'grabbing' : 'ns-resize';
     document.body.style.userSelect = 'none';
+
+    // Opret lokal drag-kopi med frisk uid så vi kan opdatere den under drag
+    const dragId = uid();
+    setLokale(prev => [...prev, { ...blok, id: dragId, _local: true }]);
 
     function onMove(ev) {
       const delta    = getY(ev, dagIdx) - startY;
@@ -187,23 +234,23 @@ export default function VikarTilgaengelighedPage() {
       const dur = slutMin - startMin;
 
       if (mode === 'top') {
-        curStart = clamp(snap(startMin + deltaMin), TIMER_START*60, slutMin - SNAP);
+        curStart = clamp(snap(startMin + deltaMin), TIMER_START * 60, slutMin - SNAP);
         curSlut  = slutMin;
       } else if (mode === 'bottom') {
         curStart = startMin;
-        curSlut  = clamp(snap(slutMin + deltaMin), startMin + SNAP, TIMER_SLUT*60);
+        curSlut  = clamp(snap(slutMin + deltaMin), startMin + SNAP, TIMER_SLUT * 60);
       } else {
-        curStart = clamp(snap(startMin + deltaMin), TIMER_START*60, TIMER_SLUT*60 - dur);
+        curStart = clamp(snap(startMin + deltaMin), TIMER_START * 60, TIMER_SLUT * 60 - dur);
         curSlut  = curStart + dur;
       }
 
       dragRef.current = { curStart, curSlut };
 
-      setLokale(prev => {
-        const existing = prev.find(b => b.id === blok.id);
-        const ny = { ...(existing || blok), id: blok.id, start_time: minToStr(curStart), end_time: minToStr(curSlut), _local: true };
-        return existing ? prev.map(b => b.id === blok.id ? ny : b) : [...prev, ny];
-      });
+      setLokale(prev => prev.map(b =>
+        b.id === dragId
+          ? { ...b, start_time: minToStr(curStart), end_time: minToStr(curSlut) }
+          : b
+      ));
     }
 
     function onUp() {
@@ -215,10 +262,12 @@ export default function VikarTilgaengelighedPage() {
       const { curStart, curSlut } = dragRef.current;
       dragRef.current = null;
 
+      // Fjern altid drag-kopien
+      setLokale(prev => prev.filter(b => b.id !== dragId));
+
       if (hasMoved) {
-        const opdateret = { ...blok, start_time: minToStr(curStart), end_time: minToStr(curSlut) };
-        if (!blok._local) setLokale(prev => [...prev.filter(b => b.id !== blok.id), { ...opdateret, _local: true }]);
-        gem(opdateret);
+        // Brug flyt() som sletter den gamle server-blok og opretter en ny
+        flyt(blok, minToStr(curStart), minToStr(curSlut));
       } else {
         // Klik uden træk → åbn kommentar-modal
         if (aktivId === blok.id) {
@@ -267,8 +316,11 @@ export default function VikarTilgaengelighedPage() {
           <div ref={timeColRef} className="flex-1 overflow-hidden">
             <div style={{ height: TIMER.length * TIME_PX }}>
               {TIMER.map(t => (
-                <div key={t} className="border-b border-slate-100 flex items-start justify-end pr-2 pt-1" style={{ height: TIME_PX }}>
-                  <span className="text-xs text-slate-300 tabular-nums leading-none">{String(t).padStart(2,'0')}</span>
+                <div key={t} className="border-b border-slate-100 flex items-start justify-end pr-2 pt-1"
+                  style={{ height: TIME_PX }}>
+                  <span className="text-xs text-slate-300 tabular-nums leading-none">
+                    {String(t).padStart(2, '0')}
+                  </span>
                 </div>
               ))}
             </div>
@@ -278,7 +330,7 @@ export default function VikarTilgaengelighedPage() {
         {/* Dag-kolonner */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
           <div className="flex shrink-0 border-b border-slate-200 bg-white sticky top-0 z-20"
-style={{ height: HEADER_H }}>
+            style={{ height: HEADER_H }}>
             {ugedage.map((dag, i) => {
               const erIdag = dagTilStreng(dag) === idagStr;
               return (
@@ -292,8 +344,8 @@ style={{ height: HEADER_H }}>
           </div>
 
           <div ref={yScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden"
-onScroll={handleYScroll}>
-<div className="flex flex-1" style={{ height: TIMER.length * TIME_PX }}>
+            onScroll={handleYScroll}>
+            <div className="flex flex-1" style={{ height: TIMER.length * TIME_PX }}>
               {ugedage.map((dag, i) => {
                 const dagStr    = dagTilStreng(dag);
                 const erIdag    = dagStr === idagStr;
@@ -303,7 +355,7 @@ onScroll={handleYScroll}>
                   <div key={i}
                     ref={el => colRefs.current[i] = el}
                     className={`flex-1 relative border-r border-slate-200 last:border-r-0 select-none cursor-default ${erIdag ? 'bg-blue-50/20' : ''}`}
-style={{ height: TIMER.length * TIME_PX }}
+                    style={{ height: TIMER.length * TIME_PX }}
                     onDoubleClick={e => handleDblClick(e, i)}
                   >
                     {TIMER.map(t => (
@@ -316,11 +368,10 @@ style={{ height: TIMER.length * TIME_PX }}
                     ))}
 
                     {dagBlokke.map(blok => {
-                      const sMin    = strToMin(blok.start_time.slice(0,5));
-                      const eMin    = strToMin(blok.end_time.slice(0,5));
-                      const top     = minToY(sMin);
-                      const height  = Math.max(minToY(eMin) - top, 24);
-                      const erAktiv = aktivId === blok.id;
+                      const sMin   = strToMin(blok.start_time.slice(0, 5));
+                      const eMin   = strToMin(blok.end_time.slice(0, 5));
+                      const top    = minToY(sMin);
+                      const height = Math.max(minToY(eMin) - top, 24);
 
                       return (
                         <BlokKomponent
@@ -328,16 +379,12 @@ style={{ height: TIMER.length * TIME_PX }}
                           blok={blok}
                           top={top}
                           height={height}
-                          erAktiv={erAktiv}
+                          erAktiv={aktivId === blok.id}
                           sMin={sMin}
                           eMin={eMin}
                           handlePx={HANDLE_PX}
                           onMouseDown={e => handleBlokMouseDown(e, blok, i)}
                           onSlet={e => { e.stopPropagation(); slet(blok); }}
-                          onKlik={() => {
-                            setAktivId(blok.id);
-                            setKommentar(blok.kommentar || '');
-                          }}
                         />
                       );
                     })}
@@ -358,7 +405,7 @@ style={{ height: TIMER.length * TIME_PX }}
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Utilgængelighed</h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {aktivBlok.start_time.slice(0,5)} – {aktivBlok.end_time.slice(0,5)}
+                  {aktivBlok.start_time.slice(0, 5)} – {aktivBlok.end_time.slice(0, 5)}
                 </p>
               </div>
               <button onClick={() => setAktivId(null)} className="text-slate-300 hover:text-slate-500 text-2xl leading-none">×</button>
@@ -366,10 +413,16 @@ style={{ height: TIMER.length * TIME_PX }}
             <div className="px-6 py-5 space-y-4">
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Kommentar (valgfri)</label>
-                <input autoFocus type="text" value={kommentar}
+                <input
+                  autoFocus
+                  type="text"
+                  value={kommentar}
                   onChange={e => setKommentar(e.target.value)}
                   placeholder="F.eks. lægetid, kursus…"
-                  onKeyDown={e => { if (e.key === 'Enter') gemKommentar(aktivBlok); if (e.key === 'Escape') setAktivId(null); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') gemKommentar(aktivBlok);
+                    if (e.key === 'Escape') setAktivId(null);
+                  }}
                   className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
               </div>
@@ -393,10 +446,6 @@ style={{ height: TIMER.length * TIME_PX }}
 
 /**
  * BlokKomponent — én utilgængeligheds-blok i kalenderen.
- * Cursor skifter dynamisk baseret på museposition:
- *   - Øverste 10px: n-resize (juster starttid)
- *   - Nederste 10px: s-resize (juster sluttid)
- *   - Midten: grab → grabbing (flyt hele blokken)
  */
 function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMouseDown, onSlet }) {
   const ref = React.useRef(null);
@@ -405,7 +454,7 @@ function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMou
   function getMode(e) {
     if (!ref.current) return 'move';
     const rect = ref.current.getBoundingClientRect();
-    const relY = e.clientY - rect.top;
+    const relY  = e.clientY - rect.top;
     if (relY <= handlePx)               return 'top';
     if (relY >= rect.height - handlePx) return 'bottom';
     return 'move';
@@ -413,16 +462,13 @@ function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMou
 
   function handleMouseMove(e) {
     const mode = getMode(e);
-    if (mode === 'top')    setCursor('n-resize');
+    if (mode === 'top')         setCursor('n-resize');
     else if (mode === 'bottom') setCursor('s-resize');
-    else                   setCursor('grab');
+    else                        setCursor('grab');
   }
 
   function handleMouseDown(e) {
-    // Beregn mode her og send det med så handleBlokMouseDown altid får korrekt mode
-    const mode = getMode(e);
-    // Override: sæt en custom property på eventet som handleBlokMouseDown kan bruge
-    e._blokMode = mode;
+    e._blokMode = getMode(e);
     onMouseDown(e);
   }
 
@@ -461,13 +507,11 @@ function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMou
         ×
       </button>
 
-      {/* Top resize indikator */}
       <div className="absolute top-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex justify-center"
         style={{ height: handlePx, background: 'linear-gradient(to bottom, rgba(239,68,68,0.25), transparent)' }}>
         <div className="w-8 h-0.5 rounded-full bg-red-400 mt-1" />
       </div>
 
-      {/* Bottom resize indikator */}
       <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center"
         style={{ height: handlePx, background: 'linear-gradient(to top, rgba(239,68,68,0.25), transparent)' }}>
         <div className="w-8 h-0.5 rounded-full bg-red-400 mb-1" />
