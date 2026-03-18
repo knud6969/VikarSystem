@@ -4,9 +4,9 @@
   "description": "System til afdækning af vikarer til folkeskoler",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js"
-  },
+  "start": "node backend/server.js",
+  "dev": "concurrently \"nodemon backend/server.js\" \"npm run dev --prefix frontend\""
+},
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cors": "^2.8.6",
