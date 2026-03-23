@@ -22,6 +22,7 @@ import PersonModal from '../components/kalender/PersonModal';
 import SygemeldingModal from '../components/kalender/SygemeldingModal';
 import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
 import BeskedModal from '../components/beskeder/BeskedModal';
+import { fetchLektionerMedBeskeder } from '../api/beskedFetch';
 
 const TIME_PX       = 64;
 const COL_W         = 140;
@@ -90,6 +91,12 @@ export default function AdminKalenderPage() {
   const { lektioner, fravaer, tildelinger, tilgaengelighed, loading, error, refetch } = useKalender(mandag);
   const { data: alleLaerere, refetch: refetchLaerere } = useApi(laererService.getAll, []);
   const { data: alleVikarer }                           = useApi(vikarService.getAll, []);
+
+  const [lektionerMedBeskeder, setLektionerMedBeskeder] = useState([]);
+  useEffect(() => {
+    if (!lektioner.length) return;
+    fetchLektionerMedBeskeder(lektioner.map(l => l.id)).then(setLektionerMedBeskeder);
+  }, [lektioner.length]);
 
   const ugedage  = getUgedage(mandag);
   const ugeNr    = getUgenummer(mandag);
@@ -530,6 +537,7 @@ export default function AdminKalenderPage() {
                           lektioner={dagLektioner}
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
+                          lektionerMedBeskeder={lektionerMedBeskeder}
                           dagOptaget={ugePerson.type === 'vikar'
                             ? tilgaengelighed.filter(t => Number(t.substitute_id) === Number(ugePerson.id) && t.date === dagStr)
                             : []}
@@ -558,6 +566,7 @@ export default function AdminKalenderPage() {
                           lektioner={dagLektioner}
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
+                          lektionerMedBeskeder={lektionerMedBeskeder}
                           dagOptaget={person.type === 'vikar'
                             ? tilgaengelighed.filter(t => Number(t.substitute_id) === Number(person.id) && t.date === dagStr)
                             : []}
@@ -651,7 +660,7 @@ export default function AdminKalenderPage() {
 /* ────────────────────────────────────────────────────────────
  * GitterKolonne — én tidssøjle-kolonne i gitteret
  * ──────────────────────────────────────────────────────────── */
-function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, dagOptaget = [], onLektionKlik }) {
+function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, lektionerMedBeskeder = [], dagOptaget = [], onLektionKlik }) {
   return (
     <div
       className={`relative border-r border-slate-200 last:border-r-0 shrink-0 ${erFravaer ? 'bg-red-50/30' : ''}`}
@@ -699,6 +708,7 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, dagOptaget = [
         const { top, height } = beregnPosition(lektion.start_time, lektion.end_time, TIME_PX);
         const farve           = statusFarve(lektion.status);
         const tildeling       = tildelinger.find(t => t.lesson_id === lektion.id);
+        const harBeskeder     = lektionerMedBeskeder.includes(lektion.id);
 
         return (
           <button
@@ -712,6 +722,9 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, dagOptaget = [
               border: `1.5px solid ${farve.border}`,
             }}
           >
+            {harBeskeder && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+            )}
             {/* Fag + initialer på samme linje */}
             <div className="flex items-center justify-between gap-1">
               <p className="font-semibold text-xs leading-tight truncate" style={{ color: farve.text }}>
