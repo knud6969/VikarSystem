@@ -113,14 +113,17 @@ export default function BeskedModal({ lektion, onLuk }) {
           )}
           {beskeder.map(b => {
             const erMig     = b.afsender_id === bruger?.id;
-            const rolle     = b.afsender_rolle === 'laerer' ? 'Lærer' : 'Vikar';
+            const rolleMap  = { laerer: 'Lærer', vikar: 'Vikar', admin: 'Admin' };
+            const rolle     = rolleMap[b.afsender_rolle] ?? b.afsender_rolle;
             const tidspunkt = new Date(b.created_at).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
             return (
               <div key={b.id} className={`flex flex-col ${erMig ? 'items-end' : 'items-start'}`}>
                 <div className={`flex items-center gap-1.5 mb-1 ${erMig ? 'flex-row-reverse' : ''}`}>
                   <span className="text-xs font-medium text-slate-600">{erMig ? 'Dig' : b.afsender_navn}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                    b.afsender_rolle === 'laerer' ? 'bg-violet-100 text-violet-600' : 'bg-emerald-100 text-emerald-600'
+                    b.afsender_rolle === 'laerer' ? 'bg-violet-100 text-violet-600'
+                    : b.afsender_rolle === 'admin' ? 'bg-blue-100 text-blue-600'
+                    : 'bg-emerald-100 text-emerald-600'
                   }`}>{rolle}</span>
                   <span className="text-xs text-slate-300">{tidspunkt}</span>
                 </div>

@@ -1,5 +1,5 @@
-export const TIMER_START = 7;
-export const TIMER_SLUT  = 16;
+export const TIMER_START = 5;
+export const TIMER_SLUT  = 18;
 export const DAGE = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag'];
 
 /**

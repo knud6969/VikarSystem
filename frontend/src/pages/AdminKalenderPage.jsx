@@ -21,6 +21,7 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import PersonModal from '../components/kalender/PersonModal';
 import SygemeldingModal from '../components/kalender/SygemeldingModal';
 import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
+import BeskedModal from '../components/beskeder/BeskedModal';
 
 const TIME_PX       = 64;
 const COL_W         = 140;
@@ -75,6 +76,7 @@ export default function AdminKalenderPage() {
 
   // Lektion-detalje
   const [valgtLektion,   setValgtLektion]   = useState(null);
+  const [beskedLektion,  setBeskedLektion]  = useState(null);
   const [actionLoading,  setActionLoading]  = useState(false);
   const [actionFejl,     setActionFejl]     = useState('');
   const [vikarListe,     setVikarListe]     = useState(null);
@@ -379,21 +381,15 @@ export default function AdminKalenderPage() {
 
           {/* Højre: person-filter — kun i normal tilstand */}
           {!erUgeOversigt && (
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-              {[['alle','Alle'],['laerere','Lærere'],['vikarer','Vikarer']].map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => { setFilterType(val); setValgtPersonId(null); }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    filterType === val
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <select
+              value={filterType}
+              onChange={e => { setFilterType(e.target.value); setValgtPersonId(null); }}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="alle">Alle</option>
+              <option value="laerere">Lærere</option>
+              <option value="vikarer">Vikarer</option>
+            </select>
           )}
         </div>
 
@@ -588,6 +584,7 @@ export default function AdminKalenderPage() {
                 onTildelVikar={tildelVikar}
                 onTildelAlle={tildelAlleIdag}
                 onFjernTildeling={fjernTildeling}
+                onBeskeder={() => setBeskedLektion(valgtLektion)}
               />
             </div>
           )}
@@ -638,6 +635,13 @@ export default function AdminKalenderPage() {
             setActivPerson(null);
             await Promise.all([refetch(), refetchLaerere()]);
           }}
+        />
+      )}
+
+      {beskedLektion && (
+        <BeskedModal
+          lektion={beskedLektion}
+          onLuk={() => setBeskedLektion(null)}
         />
       )}
     </>
@@ -739,7 +743,7 @@ function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, dagOptaget = [
  * ──────────────────────────────────────────────────────────── */
 function DetaljePanelIndhold({
   lektion, vikarListe, henterVikarer, actionLoading, actionFejl,
-  onLuk, onHentVikarer, onTildelVikar, onTildelAlle, onFjernTildeling,
+  onLuk, onHentVikarer, onTildelVikar, onTildelAlle, onFjernTildeling, onBeskeder,
 }) {
   const [tildelAlle, setTildelAlle] = useState(false);
   const start  = new Date(lektion.start_time);
@@ -836,6 +840,13 @@ function DetaljePanelIndhold({
             {actionLoading ? 'Fjerner…' : 'Fjern tildeling'}
           </button>
         )}
+
+        <button
+          onClick={onBeskeder}
+          className="w-full py-2 border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Beskeder
+        </button>
       </div>
     </div>
   );
