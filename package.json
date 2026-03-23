@@ -4,11 +4,11 @@
   "description": "System til afdækning af vikarer til folkeskoler",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "concurrently \"nodemon backend/server.js\" \"cd frontend && npm run dev\"",
-    "dev:backend": "nodemon backend/server.js",
-    "dev:frontend": "cd frontend && npm run dev"
-  },
+  "start": "node backend/server.js",
+  "dev": "concurrently \"nodemon backend/server.js\" \"npm run dev:frontend\"",
+  "dev:backend": "nodemon backend/server.js",
+  "dev:frontend": "npm run dev --prefix frontend"
+},
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cors": "^2.8.6",
