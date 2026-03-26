@@ -108,11 +108,6 @@ export default function VikarLektionerPage() {
             </div>
             <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
           </div>
-          <div className="text-xs text-slate-400">
-            {mineLektioner.length > 0
-              ? `${mineLektioner.filter(l => dagTilStreng(new Date(l.start_time)) >= idagStr).length} kommende lektioner`
-              : 'Ingen tildelte lektioner'}
-          </div>
         </div>
 
         {/* Kalender */}

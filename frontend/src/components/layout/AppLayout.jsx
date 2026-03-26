@@ -2,12 +2,14 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const ADMIN_LINKS = [
-  { to: '/admin/kalender', label: 'Kalender' },
+  { to: '/admin/kalender',     label: 'Kalender'    },
+  { to: '/admin/timestyring',  label: 'Timestyring' },
 ];
 
 const VIKAR_LINKS = [
   { to: '/vikar/lektioner',       label: 'Mine lektioner'     },
   { to: '/vikar/tilgaengelighed', label: 'Min tilgængelighed' },
+  { to: '/vikar/timer',           label: 'Mine timer'         },
 ];
 
 const LAERER_LINKS = [

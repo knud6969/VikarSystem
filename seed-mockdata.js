@@ -21,6 +21,12 @@ const laerere = [
   { name: 'Trine Skov',        email: 'trine.skov@skole.dk'        },
 ];
 
+const paedagoger = [
+  { name: 'Maria Lund',    email: 'maria.lund@skole.dk'    },
+  { name: 'Brian Kofoed',  email: 'brian.kofoed@skole.dk'  },
+  { name: 'Pia Vestergaard', email: 'pia.vestergaard@skole.dk' },
+];
+
 const klasser = ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '5A', '6A'];
 const fag     = ['Dansk', 'Matematik', 'Engelsk', 'Naturfag', 'Historie', 'Idræt', 'Musik', 'Geografi', 'Billedkunst'];
 const lokaler = ['A1', 'A2', 'B3', 'B4', 'C1', 'Sal', 'Idrætsal'];
@@ -89,6 +95,31 @@ async function seed() {
       }
     }
 
+    // Pædagoger
+    console.log('Opretter pædagoger med login…');
+    const paedagogIds = [];
+    for (const p of paedagoger) {
+      const brugerRes = await client.query(
+        `INSERT INTO brugere (email, password_hash, rolle)
+         VALUES ($1, $2, 'laerer')
+         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash RETURNING id`,
+        [p.email, laererHash]
+      );
+      const userId = brugerRes.rows[0].id;
+
+      const existing = await client.query('SELECT id FROM laerere WHERE user_id = $1', [userId]);
+      if (existing.rows.length > 0) {
+        await client.query("UPDATE laerere SET type = 'paedagog' WHERE id = $1", [existing.rows[0].id]);
+        paedagogIds.push(existing.rows[0].id);
+      } else {
+        const res = await client.query(
+          `INSERT INTO laerere (user_id, name, status, type) VALUES ($1, $2, 'aktiv', 'paedagog') RETURNING id`,
+          [userId, p.name]
+        );
+        paedagogIds.push(res.rows[0].id);
+      }
+    }
+
     // Vikarer
     console.log('Opretter vikarer med login…');
     const vikarIds = [];
@@ -149,6 +180,38 @@ async function seed() {
       }
     }
 
+    // Lektioner for pædagoger
+    const paedagogFag = ['SFO', 'Støtte', 'Specialklasse', 'Mellemordning', '0. klasse'];
+    for (let dagOffset = 0; dagOffset < 5; dagOffset++) {
+      const dag = new Date(mandag);
+      dag.setDate(dag.getDate() + dagOffset);
+
+      for (let pi = 0; pi < paedagogIds.length; pi++) {
+        const paedagogId = paedagogIds[pi];
+        const klasserId  = klasseIds[pi % klasseIds.length];
+        const antal      = 3 + Math.floor(Math.random() * 2);
+        const shuffled   = [...SLOTS].sort(() => Math.random() - 0.5);
+        const valgteSlots = shuffled.slice(0, antal);
+
+        for (const [start, slut] of valgteSlots) {
+          const startTime = new Date(dag);
+          const [sh, sm] = start.split(':');
+          startTime.setHours(Number(sh), Number(sm), 0, 0);
+
+          const endTime = new Date(dag);
+          const [eh, em] = slut.split(':');
+          endTime.setHours(Number(eh), Number(em), 0, 0);
+
+          await client.query(
+            `INSERT INTO lektioner (teacher_id, class_id, subject, room, start_time, end_time, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'normal')`,
+            [paedagogId, klasserId, tilfældig(paedagogFag), tilfældig(lokaler), startTime.toISOString(), endTime.toISOString()]
+          );
+          lektionerOprettet++;
+        }
+      }
+    }
+
     // Tilgængelighed for vikarer
     console.log('Opretter tilgængelighed…');
     for (let dagOffset = 0; dagOffset < 5; dagOffset++) {
@@ -170,10 +233,13 @@ async function seed() {
     console.log(`\n✅ Færdig!\n`);
     console.log(`  ${klasser.length} klasser`);
     console.log(`  ${laerere.length} lærere`);
+    console.log(`  ${paedagoger.length} pædagoger`);
     console.log(`  ${vikarer.length} vikarer`);
     console.log(`  ${lektionerOprettet} lektioner\n`);
     console.log('Lærer-logins (password: password123):');
     laerere.forEach(l => console.log(`  ${l.email}`));
+    console.log('\nPædagog-logins (password: password123):');
+    paedagoger.forEach(p => console.log(`  ${p.email}`));
     console.log('\nVikar-logins (password: vikar123):');
     vikarer.forEach(v => console.log(`  ${v.email}`));
 

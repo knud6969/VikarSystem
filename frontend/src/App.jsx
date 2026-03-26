@@ -4,8 +4,10 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import AdminKalenderPage from './pages/AdminKalenderPage';
+import AdminTimestyringPage from './pages/AdminTimestyringPage';
 import VikarLektionerPage from './pages/VikarLektionerPage';
 import VikarTilgaengelighedPage from './pages/VikarTilgaengelighedPage';
+import VikarTimerPage from './pages/VikarTimerPage';
 import LaererLektionerPage from './pages/LaererLektionerPage';
 import { UautorisPage } from './pages/PlaceholderPages';
 
@@ -27,7 +29,8 @@ export default function App() {
             }
           >
             <Route index element={<Navigate to="kalender" replace />} />
-            <Route path="kalender" element={<AdminKalenderPage />} />
+            <Route path="kalender"    element={<AdminKalenderPage />} />
+            <Route path="timestyring" element={<AdminTimestyringPage />} />
           </Route>
 
           {/* Vikar */}
@@ -42,6 +45,7 @@ export default function App() {
             <Route index element={<Navigate to="lektioner" replace />} />
             <Route path="lektioner"       element={<VikarLektionerPage />} />
             <Route path="tilgaengelighed" element={<VikarTilgaengelighedPage />} />
+            <Route path="timer"           element={<VikarTimerPage />} />
           </Route>
 
           {/* Lærer */}

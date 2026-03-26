@@ -26,6 +26,7 @@ export default function PersonModal({
   }, [onLuk]);
 
   const erLaerer      = person.type === 'laerer';
+  const erPaedagog    = erLaerer && person.dbType === 'paedagog';
   const erFravaerende = erLaerer && person.status !== 'aktiv';
   const statusStyle   = STATUS_STYLES[person.status] ?? STATUS_STYLES.aktiv;
   const initialer     = person.name.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2);
@@ -44,7 +45,7 @@ export default function PersonModal({
           <div className="flex-1 min-w-0 pt-0.5">
             <h2 className="text-base font-semibold text-slate-900 leading-tight truncate">{person.name}</h2>
             <p className="text-xs text-slate-400 mt-0.5 capitalize">
-              {erLaerer ? 'Lærer' : 'Vikar'}
+              {erPaedagog ? 'Pædagog' : erLaerer ? 'Lærer' : 'Vikar'}
               {person.email && ` · ${person.email}`}
             </p>
             {person.phone && <p className="text-xs text-slate-400">{person.phone}</p>}

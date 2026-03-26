@@ -10,7 +10,10 @@ const {
   fravaerRouter,
   tildelingRouter,
   tilgaengelighedRouter,
-  beskedRouter,                  // ← NY
+  beskedRouter,
+  timerRouter,
+  indstillingerRouter,
+  loenkoerselRouter,
 } = require('./routes/index');
 
 const app = express();
@@ -27,7 +30,10 @@ app.use('/lektioner',       lektionRouter);
 app.use('/fravaer',         fravaerRouter);
 app.use('/tildelinger',     tildelingRouter);
 app.use('/tilgaengelighed', tilgaengelighedRouter);
-app.use('/beskeder',        beskedRouter);  // ← NY
+app.use('/beskeder',        beskedRouter);
+app.use('/timer',           timerRouter);
+app.use('/indstillinger',   indstillingerRouter);
+app.use('/loenkoersel',     loenkoerselRouter);
 
 // ── Sundhedstjek ─────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

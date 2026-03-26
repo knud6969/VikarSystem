@@ -59,6 +59,29 @@ beskedRouter.get('/lektioner-med-beskeder', requireAuth, BeskedController.getLek
 beskedRouter.get('/lektion/:lessonId',      requireAuth, BeskedController.getForLektion);
 beskedRouter.post('/lektion/:lessonId',     requireAuth, BeskedController.opret);
 
+// ── Timer ─────────────────────────────────────────────────────────────────────
+const timerRouter     = express.Router();
+const TimerController = require('../controllers/timerController');
+
+timerRouter.get('/mine',          requireAuth, requireRolle('vikar'), TimerController.getMineTimer);
+timerRouter.get('/admin',         requireAuth, requireRolle('admin'), TimerController.getAlleTimer);
+timerRouter.get('/admin/:vikarId',requireAuth, requireRolle('admin'), TimerController.getVikarTimer);
+
+// ── Indstillinger ─────────────────────────────────────────────────────────────
+const indstillingerRouter     = express.Router();
+const IndstillingerController = require('../controllers/indstillingerController');
+
+indstillingerRouter.get('/timesat', requireAuth,                        IndstillingerController.getTimesatser);
+indstillingerRouter.put('/timesat', requireAuth, requireRolle('admin'), IndstillingerController.setTimesatser);
+
+// ── Lønkørsel ─────────────────────────────────────────────────────────────────
+const loenkoerselRouter     = express.Router();
+const LoenkoerselController = require('../controllers/loenkoerselController');
+
+loenkoerselRouter.get('/',          requireAuth,                        LoenkoerselController.get);
+loenkoerselRouter.post('/',         requireAuth, requireRolle('admin'), LoenkoerselController.koer);
+loenkoerselRouter.delete('/:maaned',requireAuth, requireRolle('admin'), LoenkoerselController.annuller);
+
 module.exports = {
   vikarRouter,
   laererRouter,
@@ -67,4 +90,7 @@ module.exports = {
   tildelingRouter,
   tilgaengelighedRouter,
   beskedRouter,
+  timerRouter,
+  indstillingerRouter,
+  loenkoerselRouter,
 };

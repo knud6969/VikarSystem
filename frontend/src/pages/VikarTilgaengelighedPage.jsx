@@ -334,6 +334,14 @@ export default function VikarTilgaengelighedPage() {
 
       if (hasMoved) {
         const nyDate = dagTilStreng(ugedage[finalDagIdx]);
+        const harOverlap = stateRef.current.alleBlokke
+          .filter(b => b.date === nyDate && b.id !== blok.id)
+          .some(b => {
+            const bS = strToMin(b.start_time.slice(0, 5));
+            const bE = strToMin(b.end_time.slice(0, 5));
+            return curStart < bE && curSlut > bS;
+          });
+        if (harOverlap) { refetch(); return; }
         flyt(blok, minToStr(curStart), minToStr(curSlut), nyDate);
       } else {
         // Click without drag → open modal

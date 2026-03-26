@@ -13,7 +13,10 @@ export default defineConfig({
       '/fravaer':         'http://localhost:3000',
       '/tildelinger':     'http://localhost:3000',
       '/tilgaengelighed': 'http://localhost:3000',
-      '/beskeder':        'http://localhost:3000',  // ← NY
+      '/beskeder':        'http://localhost:3000',
+      '/timer':           'http://localhost:3000',
+      '/indstillinger':   'http://localhost:3000',
+      '/loenkoersel':     'http://localhost:3000',
     },
   },
 });

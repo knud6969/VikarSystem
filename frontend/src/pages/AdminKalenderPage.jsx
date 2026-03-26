@@ -82,6 +82,7 @@ export default function AdminKalenderPage() {
   const [actionFejl,     setActionFejl]     = useState('');
   const [vikarListe,     setVikarListe]     = useState(null);
   const [henterVikarer,  setHenterVikarer]  = useState(false);
+  const [advarsel,       setAdvarsel]       = useState(null);
 
   const xScrollRef = useRef(null);
   const yScrollRef = useRef(null);
@@ -132,7 +133,7 @@ export default function AdminKalenderPage() {
   // ── Personliste ───────────────────────────────────────────
   const personer = (() => {
     const l = (alleLaerere || []).map((p, i) => ({
-      ...p, type: 'laerer', farve: AVATAR_FARVER[i % AVATAR_FARVER.length],
+      ...p, dbType: p.type, type: 'laerer', farve: AVATAR_FARVER[i % AVATAR_FARVER.length],
     }));
     const v = (alleVikarer || []).map((p, i) => ({
       ...p, type: 'vikar', farve: AVATAR_FARVER[(l.length + i) % AVATAR_FARVER.length],
@@ -250,7 +251,7 @@ export default function AdminKalenderPage() {
   }
 
   async function tildelVikar(vikarId) {
-    setActionLoading(true); setActionFejl('');
+    setActionLoading(true); setActionFejl(''); setAdvarsel(null);
     try {
       const tildeling = await tildelingService.tildel(valgtLektion.id, vikarId);
       // Optimistisk opdatering: opdater valgtLektion med ny status og tildeling
@@ -271,20 +272,40 @@ export default function AdminKalenderPage() {
 
   async function tildelAlleIdag(vikarId) {
     if (!valgtLektion) return;
-    setActionLoading(true); setActionFejl('');
+    setActionLoading(true); setActionFejl(''); setAdvarsel(null);
     try {
       const lektionsDag = dagTilStreng(new Date(valgtLektion.start_time));
-      const alleUdaekket = lektioner.filter(l =>
+      const toMin = d => d.getHours() * 60 + d.getMinutes();
+      const strMin = s => { const [h, m] = s.slice(0, 5).split(':').map(Number); return h * 60 + m; };
+      const vikarOptaget = tilgaengelighed.filter(t =>
+        Number(t.substitute_id) === Number(vikarId) && t.status === 'optaget' && t.date === lektionsDag
+      );
+      const alleLektionerIdag = lektioner.filter(l =>
         l.teacher_id === valgtLektion.teacher_id &&
         dagTilStreng(new Date(l.start_time)) === lektionsDag &&
         l.status === 'udækket'
       );
+      const alleUdaekket = alleLektionerIdag.filter(l => {
+        const lS = toMin(new Date(l.start_time));
+        const lE = toMin(new Date(l.end_time));
+        return !vikarOptaget.some(t => lS < strMin(t.end_time) && lE > strMin(t.start_time));
+      });
       // Optimistisk: opdater valgtLektion med det samme
       setValgtLektion(prev => ({ ...prev, status: 'dækket' }));
       // Tildel alle parallelt
       await Promise.all(alleUdaekket.map(l => tildelingService.tildel(l.id, vikarId)));
       await refetch();
       setValgtLektion(null);
+      // Vis advarsel hvis nogle lektioner blev sprunget over
+      const skippede = alleLektionerIdag.length - alleUdaekket.length;
+      if (skippede > 0) {
+        const vikarNavn = vikarListe?.find(v => Number(v.id) === Number(vikarId))?.name ?? 'Vikaren';
+        const tiderStr = vikarOptaget.map(t => `${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`).join(', ');
+        setAdvarsel(
+          `${alleUdaekket.length} af ${alleLektionerIdag.length} lektioner blev tildelt ${vikarNavn}. ` +
+          `${skippede} lektion${skippede > 1 ? 'er' : ''} sprunget over – ${vikarNavn} er utilgængelig: ${tiderStr}.`
+        );
+      }
     } catch (err) {
       // Fortryd optimistisk opdatering ved fejl
       setValgtLektion(prev => ({ ...prev, status: 'udækket' }));
@@ -314,6 +335,15 @@ export default function AdminKalenderPage() {
   return (
     <>
       <div className="flex flex-col" style={{ height: 'calc(100vh - 72px)' }}>
+
+        {/* ── Advarsel (delvis tildeling) ───────────────────── */}
+        {advarsel && (
+          <div className="mb-3 shrink-0 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
+            <span className="shrink-0">⚠</span>
+            <span className="flex-1">{advarsel}</span>
+            <button onClick={() => setAdvarsel(null)} className="shrink-0 text-amber-400 hover:text-amber-600 text-base leading-none">×</button>
+          </div>
+        )}
 
         {/* ── Toolbar ───────────────────────────────────────── */}
         <div className="flex items-center justify-between mb-3 gap-3 flex-wrap shrink-0">
@@ -499,8 +529,12 @@ export default function AdminKalenderPage() {
                         <span className={`text-xs font-semibold leading-none ${erValgt ? 'text-blue-700' : 'text-slate-600'}`}>
                           {getInitialer(person.name)}
                         </span>
-                        <span className={`text-xs mt-0.5 ${person.type === 'laerer' ? 'text-blue-400' : 'text-emerald-500'}`}>
-                          {person.type === 'laerer' ? 'L' : 'V'}
+                        <span className={`text-xs mt-0.5 ${
+                          person.type === 'vikar'           ? 'text-emerald-500' :
+                          person.dbType === 'paedagog'      ? 'text-violet-400'  :
+                                                              'text-blue-400'
+                        }`}>
+                          {person.type === 'vikar' ? 'V' : person.dbType === 'paedagog' ? 'P' : 'L'}
                         </span>
                       </button>
                     );
@@ -605,8 +639,11 @@ export default function AdminKalenderPage() {
       {personModal && (() => {
         // Berig personModal med live status fra alleLaerere/alleVikarer
         // så status altid er opdateret efter sygemelding/raskmelding
-        const livePerson = personModal.type === 'laerer'
-          ? { ...personModal, ...(alleLaerere || []).find(l => l.id === personModal.id) }
+        const freshData  = personModal.type === 'laerer'
+          ? (alleLaerere || []).find(l => l.id === personModal.id)
+          : null;
+        const livePerson = freshData
+          ? { ...personModal, ...freshData, dbType: freshData.type, type: 'laerer', farve: personModal.farve }
           : personModal;
         return (
           <PersonModal
