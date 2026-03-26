@@ -386,9 +386,6 @@ export default function VikarTilgaengelighedPage() {
               Kopieret {clipboard.start_time.slice(0,5)}–{clipboard.end_time.slice(0,5)} · Ctrl+V for at indsætte
             </span>
           )}
-          <p className="text-xs text-slate-400">
-            Dobbeltklik for at tilføje · Træk for at flytte · Klik for detaljer · Ctrl+C/V for at kopiere
-          </p>
         </div>
       </div>
 
