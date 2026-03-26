@@ -14,7 +14,7 @@ const STATUS_STYLES = {
 };
 
 const STATUS_LABELS = {
-  normal:      'Normal',
+  normal:      'Planlagt',
   udækket:     'Udækket',
   dækket:      'Dækket',
   aktiv:       'Aktiv',

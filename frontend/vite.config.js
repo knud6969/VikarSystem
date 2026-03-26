@@ -17,6 +17,7 @@ export default defineConfig({
       '/timer':           'http://localhost:3000',
       '/indstillinger':   'http://localhost:3000',
       '/loenkoersel':     'http://localhost:3000',
+      '/notifikationer':  'http://localhost:3000',
     },
   },
 });

@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import GenvejModal from '../common/GenvejModal';
+import KlokkeKnap from '../notifikationer/KlokkeKnap';
 
 const ADMIN_LINKS = [
   { to: '/admin/kalender',     label: 'Kalender'    },
@@ -19,6 +22,7 @@ const LAERER_LINKS = [
 export default function AppLayout() {
   const { bruger, logout } = useAuth();
   const navigate = useNavigate();
+  const [visGenveje, setVisGenveje] = useState(false);
 
   const links =
     bruger?.rolle === 'admin'  ? ADMIN_LINKS  :
@@ -27,7 +31,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-full px-4 h-14 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-widest uppercase text-slate-800 select-none">
             Vikar<span className="text-blue-600">System</span>
@@ -55,6 +59,16 @@ export default function AppLayout() {
             <span className="text-xs text-slate-400 hidden sm:block">
               {bruger?.email} · <span className="capitalize">{bruger?.rolle}</span>
             </span>
+            {(bruger?.rolle === 'laerer' || bruger?.rolle === 'vikar') && (
+              <KlokkeKnap />
+            )}
+            <button
+              onClick={() => setVisGenveje(true)}
+              title="Tastaturgenveje"
+              className="text-xs px-2 py-1.5 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors font-mono"
+            >
+              ?
+            </button>
             <button
               onClick={() => { logout(); navigate('/login'); }}
               className="text-xs px-3 py-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
@@ -68,6 +82,8 @@ export default function AppLayout() {
       <main className="px-4 py-4">
         <Outlet />
       </main>
+
+      {visGenveje && <GenvejModal onLuk={() => setVisGenveje(false)} />}
     </div>
   );
 }

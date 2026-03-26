@@ -1,7 +1,18 @@
 const pool = require('../config/db');
 
 const FravaerModel = {
-  async getAll() {
+  async getAll({ teacher_id } = {}) {
+    if (teacher_id) {
+      const result = await pool.query(`
+        SELECT f.*, la.name AS laerer_navn, b.email AS oprettet_af_email
+        FROM fravaer f
+        JOIN laerere la ON la.id = f.teacher_id
+        JOIN brugere b  ON b.id  = f.oprettet_af
+        WHERE f.teacher_id = $1
+        ORDER BY f.created_at DESC
+      `, [teacher_id]);
+      return result.rows;
+    }
     const result = await pool.query(`
       SELECT f.*, la.name AS laerer_navn, b.email AS oprettet_af_email
       FROM fravaer f

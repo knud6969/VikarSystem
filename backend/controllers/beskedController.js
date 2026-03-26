@@ -1,4 +1,6 @@
-const BeskedModel = require('../models/beskedModel');
+const BeskedModel       = require('../models/beskedModel');
+const NotifikationModel = require('../models/notifikationModel');
+const pool              = require('../config/db');
 
 const BeskedController = {
   /**
@@ -36,6 +38,47 @@ const BeskedController = {
         indhold: indhold.trim(),
       });
       res.status(201).json(besked);
+
+      // Notifikation til modparten
+      try {
+        const lektionRes = await pool.query(`
+          SELECT l.subject, l.start_time,
+                 la.user_id AS laerer_bruger_id, la.name AS laerer_navn,
+                 v.user_id  AS vikar_bruger_id,  v.name  AS vikar_navn
+          FROM lektioner l
+          JOIN laerere la ON la.id = l.teacher_id
+          LEFT JOIN tildelinger ti ON ti.lesson_id = l.id
+          LEFT JOIN vikarer v ON v.id = ti.substitute_id
+          WHERE l.id = $1
+        `, [lessonId]);
+
+        if (lektionRes.rows.length) {
+          const l           = lektionRes.rows[0];
+          const afsenderRolle = req.bruger.rolle;
+          console.log('[Notif] besked: afsenderRolle=', afsenderRolle, 'vikar_bruger_id=', l.vikar_bruger_id, 'laerer_bruger_id=', l.laerer_bruger_id);
+          const dato        = new Date(l.start_time).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+
+          if (afsenderRolle === 'laerer' && l.vikar_bruger_id) {
+            await NotifikationModel.opret({
+              bruger_id: l.vikar_bruger_id,
+              type: 'ny_besked',
+              titel: `Ny besked fra ${l.laerer_navn}`,
+              besked: `${l.subject} – ${dato}`,
+              link: `/vikar/lektioner?lessonId=${lessonId}&besked=1`,
+            });
+          } else if (afsenderRolle === 'vikar') {
+            await NotifikationModel.opret({
+              bruger_id: l.laerer_bruger_id,
+              type: 'ny_besked',
+              titel: `Ny besked fra ${l.vikar_navn ?? 'vikaren'}`,
+              besked: `${l.subject} – ${dato}`,
+              link: `/laerer/lektioner?lessonId=${lessonId}&besked=1`,
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error('Notifikation (besked) fejlede:', notifErr);
+      }
     } catch (err) {
       console.error('BeskedController.opret:', err);
       res.status(500).json({ error: 'Serverfejl' });

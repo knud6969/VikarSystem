@@ -18,6 +18,7 @@ import {
 } from '../utils/kalenderUtils';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import BekræftModal from '../components/common/BekræftModal';
 import PersonModal from '../components/kalender/PersonModal';
 import SygemeldingModal from '../components/kalender/SygemeldingModal';
 import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
@@ -83,6 +84,8 @@ export default function AdminKalenderPage() {
   const [vikarListe,     setVikarListe]     = useState(null);
   const [henterVikarer,  setHenterVikarer]  = useState(false);
   const [advarsel,       setAdvarsel]       = useState(null);
+  const [bekræftTildel,  setBekræftTildel]  = useState(null); // { vikarId, alle: bool } | null
+  const [bekræftFjern,   setBekræftFjern]   = useState(false);
 
   const xScrollRef = useRef(null);
   const yScrollRef = useRef(null);
@@ -250,27 +253,30 @@ export default function AdminKalenderPage() {
     }
   }
 
-  async function tildelVikar(vikarId) {
-    setActionLoading(true); setActionFejl(''); setAdvarsel(null);
-    try {
-      const tildeling = await tildelingService.tildel(valgtLektion.id, vikarId);
-      // Optimistisk opdatering: opdater valgtLektion med ny status og tildeling
-      // så sidepanelet afspejler ændringen inden refetch er færdig
-      setValgtLektion(prev => ({
-        ...prev,
-        status: 'dækket',
-        tildeling,
-      }));
-      await refetch();
-      setValgtLektion(null);
-    } catch (err) {
-      setActionFejl(err.message);
-    } finally {
-      setActionLoading(false);
-    }
+  function tildelVikar(vikarId) {
+    setBekræftTildel({ vikarId, alle: false });
   }
 
-  async function tildelAlleIdag(vikarId) {
+  function tildelAlleIdag(vikarId) {
+    setBekræftTildel({ vikarId, alle: true });
+  }
+
+  async function udførTildeling(vikarId, alle) {
+    setBekræftTildel(null);
+    if (!alle) {
+      setActionLoading(true); setActionFejl(''); setAdvarsel(null);
+      try {
+        const tildeling = await tildelingService.tildel(valgtLektion.id, vikarId);
+        setValgtLektion(prev => ({ ...prev, status: 'dækket', tildeling }));
+        await refetch();
+        setValgtLektion(null);
+      } catch (err) {
+        setActionFejl(err.message);
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
     if (!valgtLektion) return;
     setActionLoading(true); setActionFejl(''); setAdvarsel(null);
     try {
@@ -315,7 +321,12 @@ export default function AdminKalenderPage() {
     }
   }
 
-  async function fjernTildeling() {
+  function fjernTildeling() {
+    setBekræftFjern(true);
+  }
+
+  async function udførFjernTildeling() {
+    setBekræftFjern(false);
     setActionLoading(true); setActionFejl('');
     try {
       await tildelingService.fjern(valgtLektion.tildeling.id);
@@ -331,6 +342,10 @@ export default function AdminKalenderPage() {
   // ── Render ────────────────────────────────────────────────
   if (loading) return <LoadingSpinner tekst="Henter kalender…" />;
   if (error)   return <ErrorMessage besked={error} />;
+
+  const bekræftTildelVikarNavn = bekræftTildel
+    ? (vikarListe?.find(v => Number(v.id) === Number(bekræftTildel.vikarId))?.name ?? 'vikaren')
+    : '';
 
   return (
     <>
@@ -660,6 +675,7 @@ export default function AdminKalenderPage() {
       {sygemeldModal && (
         <SygemeldingModal
           laerer={sygemeldModal}
+          initialDato={dagTilStreng(getUgedage(mandag)[valgtDagIdx])}
           onTilbage={gaaTilbageTilPersonModal}
           onSuccess={async () => {
             setSygemeldModal(null);
@@ -688,6 +704,30 @@ export default function AdminKalenderPage() {
         <BeskedModal
           lektion={beskedLektion}
           onLuk={() => setBeskedLektion(null)}
+        />
+      )}
+
+      {bekræftTildel && (
+        <BekræftModal
+          tittel={bekræftTildel.alle ? 'Tildel alle lektioner i dag?' : 'Tildel vikar?'}
+          besked={bekræftTildel.alle
+            ? `${bekræftTildelVikarNavn} tildeles alle udækkede lektioner for denne lærer i dag.`
+            : `${bekræftTildelVikarNavn} tildeles denne lektion.`}
+          bekræftTekst="Tildel"
+          variant="primary"
+          onBekræft={() => udførTildeling(bekræftTildel.vikarId, bekræftTildel.alle)}
+          onAnnuller={() => setBekræftTildel(null)}
+        />
+      )}
+
+      {bekræftFjern && (
+        <BekræftModal
+          tittel="Fjern tildeling?"
+          besked={`${valgtLektion?.tildeling?.vikar_navn ?? 'Vikaren'} fjernes fra denne lektion. Lektionen bliver udækket igen.`}
+          bekræftTekst="Fjern tildeling"
+          variant="danger"
+          onBekræft={udførFjernTildeling}
+          onAnnuller={() => setBekræftFjern(false)}
         />
       )}
     </>
@@ -800,7 +840,7 @@ function DetaljePanelIndhold({
   const slut   = new Date(lektion.end_time);
   const fmt    = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
   const farve  = statusFarve(lektion.status);
-  const labels = { normal: 'Normal', udækket: 'Udækket', dækket: 'Dækket' };
+  const labels = { normal: 'Planlagt', udækket: 'Udækket', dækket: 'Dækket' };
 
   return (
     <div>

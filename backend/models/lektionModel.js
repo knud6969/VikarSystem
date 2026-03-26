@@ -3,10 +3,13 @@ const pool = require('../config/db');
 const LektionModel = {
   async getAll() {
     const result = await pool.query(`
-      SELECT l.*, la.name AS laerer_navn, k.name AS klasse_navn
+      SELECT l.*, la.name AS laerer_navn, k.name AS klasse_navn,
+             v.id AS vikar_id, v.name AS vikar_navn
       FROM lektioner l
       JOIN laerere la ON la.id = l.teacher_id
       JOIN klasser k  ON k.id  = l.class_id
+      LEFT JOIN tildelinger ti ON ti.lesson_id = l.id
+      LEFT JOIN vikarer v      ON v.id = ti.substitute_id
       ORDER BY l.start_time
     `);
     return result.rows;
@@ -38,15 +41,17 @@ const LektionModel = {
    */
   async getForVikar(vikarId) {
     const result = await pool.query(`
-      SELECT l.*, la.name AS laerer_navn, k.name AS klasse_navn,
+      SELECT DISTINCT ON (l.id) l.*, la.name AS laerer_navn, k.name AS klasse_navn,
              ti.assigned_at
       FROM lektioner l
       JOIN tildelinger ti ON ti.lesson_id = l.id
       JOIN laerere la     ON la.id = l.teacher_id
       JOIN klasser k      ON k.id  = l.class_id
       WHERE ti.substitute_id = $1
-      ORDER BY l.start_time
+      ORDER BY l.id, l.start_time
     `, [vikarId]);
+    // Sortér efter start_time efter DISTINCT ON
+    result.rows.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     return result.rows;
   },
 

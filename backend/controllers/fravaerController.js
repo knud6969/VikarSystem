@@ -3,7 +3,8 @@ const FravaerModel = require('../models/fravaerModel');
 const FravaerController = {
   async getAll(req, res) {
     try {
-      res.json(await FravaerModel.getAll());
+      const { teacher_id } = req.query;
+      res.json(await FravaerModel.getAll(teacher_id ? { teacher_id } : {}));
     } catch (err) {
       console.error('FravaerController.getAll:', err);
       res.status(500).json({ error: 'Serverfejl' });

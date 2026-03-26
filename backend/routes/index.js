@@ -7,7 +7,7 @@ const VikarController = require('../controllers/vikarController');
 
 vikarRouter.get('/ledige', requireAuth, requireRolle('admin'), VikarController.getLedige);
 vikarRouter.get('/mig',    requireAuth, requireRolle('vikar'), VikarController.getMig);
-vikarRouter.get('/',       requireAuth, requireRolle('admin'), VikarController.getAll);
+vikarRouter.get('/',       requireAuth,                        VikarController.getAll);
 vikarRouter.get('/:id',    requireAuth,                        VikarController.getById);
 
 // ── Lærere ───────────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ fravaerRouter.patch('/:id/afslut', requireAuth, requireRolle('admin'), FravaerCo
 const tildelingRouter     = express.Router();
 const TildelingController = require('../controllers/tildelingController');
 
-tildelingRouter.get('/',       requireAuth, requireRolle('admin'), TildelingController.getAll);
+tildelingRouter.get('/',       requireAuth,                        TildelingController.getAll);
 tildelingRouter.post('/',      requireAuth, requireRolle('admin'), TildelingController.tildel);
 tildelingRouter.delete('/:id', requireAuth, requireRolle('admin'), TildelingController.fjern);
 
@@ -82,6 +82,13 @@ loenkoerselRouter.get('/',          requireAuth,                        Loenkoer
 loenkoerselRouter.post('/',         requireAuth, requireRolle('admin'), LoenkoerselController.koer);
 loenkoerselRouter.delete('/:maaned',requireAuth, requireRolle('admin'), LoenkoerselController.annuller);
 
+// ── Notifikationer ─────────────────────────────────────────────────────────────
+const notifikationRouter     = express.Router();
+const NotifikationController = require('../controllers/notifikationController');
+
+notifikationRouter.get('/',            requireAuth, NotifikationController.getForMig);
+notifikationRouter.patch('/:id/laest', requireAuth, NotifikationController.markerLaest);
+
 module.exports = {
   vikarRouter,
   laererRouter,
@@ -93,4 +100,5 @@ module.exports = {
   timerRouter,
   indstillingerRouter,
   loenkoerselRouter,
+  notifikationRouter,
 };

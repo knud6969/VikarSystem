@@ -2,21 +2,28 @@ import { useState } from 'react';
 import { fravaerService } from '../../api/fravaerService';
 import { dagTilStreng } from '../../utils/kalenderUtils';
 import ErrorMessage from '../common/ErrorMessage';
+import BekræftModal from '../common/BekræftModal';
 
-export default function SygemeldingModal({ laerer, onTilbage, onSuccess }) {
-  const idag = dagTilStreng(new Date());
+export default function SygemeldingModal({ laerer, onTilbage, onSuccess, initialDato }) {
+  const defaultDato = initialDato ?? dagTilStreng(new Date());
 
-  const [type,      setType]      = useState('syg');
-  const [startDato, setStartDato] = useState(idag);
-  const [slutDato,  setSlutDato]  = useState(idag);
-  const [loading,   setLoading]   = useState(false);
-  const [fejl,      setFejl]      = useState('');
+  const [type,       setType]       = useState('syg');
+  const [startDato,  setStartDato]  = useState(defaultDato);
+  const [slutDato,   setSlutDato]   = useState(defaultDato);
+  const [loading,    setLoading]    = useState(false);
+  const [fejl,       setFejl]       = useState('');
+  const [visBekræft, setVisBekræft] = useState(false);
 
-  async function handleSubmit() {
+  function handleSubmitKlik() {
     if (!startDato || !slutDato) { setFejl('Udfyld begge datoer'); return; }
     if (slutDato < startDato)    { setFejl('Slutdato kan ikke være før startdato'); return; }
-    setLoading(true);
     setFejl('');
+    setVisBekræft(true);
+  }
+
+  async function handleBekræft() {
+    setVisBekræft(false);
+    setLoading(true);
     try {
       const res = await fravaerService.opret({
         teacher_id: laerer.id,
@@ -32,6 +39,7 @@ export default function SygemeldingModal({ laerer, onTilbage, onSuccess }) {
   }
 
   return (
+    <>
     <ModalWrapper tittel={`Registrer fravær — ${laerer.name}`} onLuk={onTilbage}>
       <div className="space-y-4">
         <div>
@@ -72,13 +80,25 @@ export default function SygemeldingModal({ laerer, onTilbage, onSuccess }) {
             className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-1 transition-colors">
             ‹ Tilbage
           </button>
-          <button onClick={handleSubmit} disabled={loading}
+          <button onClick={handleSubmitKlik} disabled={loading}
             className="flex-1 py-2 text-sm bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors">
             {loading ? 'Registrerer…' : 'Registrer fravær'}
           </button>
         </div>
       </div>
     </ModalWrapper>
+
+    {visBekræft && (
+      <BekræftModal
+        tittel="Registrer fravær?"
+        besked={`${laerer.name} registreres som fraværende fra ${startDato} til ${slutDato}. Alle lektioner i perioden markeres som udækket.`}
+        bekræftTekst="Registrer fravær"
+        variant="danger"
+        onBekræft={handleBekræft}
+        onAnnuller={() => setVisBekræft(false)}
+      />
+    )}
+    </>
   );
 }
 
