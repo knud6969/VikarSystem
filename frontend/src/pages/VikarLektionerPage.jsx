@@ -307,7 +307,7 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
         <InfoRække label="Dato" value={start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })} />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label="Lærer"  value={lektion.laerer_navn || '—'} />
+        <InfoRække label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'} value={lektion.laerer_navn || '—'} />
         {visBesked && (
           <button onClick={onAabnBeskeder}
             className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 transition-colors relative">

@@ -41,7 +41,7 @@ const LektionModel = {
    */
   async getForVikar(vikarId) {
     const result = await pool.query(`
-      SELECT DISTINCT ON (l.id) l.*, la.name AS laerer_navn, k.name AS klasse_navn,
+      SELECT DISTINCT ON (l.id) l.*, la.name AS laerer_navn, la.type AS laerer_type, k.name AS klasse_navn,
              ti.assigned_at
       FROM lektioner l
       JOIN tildelinger ti ON ti.lesson_id = l.id

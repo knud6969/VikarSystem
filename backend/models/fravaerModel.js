@@ -101,12 +101,10 @@ const FravaerModel = {
       const fravaer = fravaerRes.rows[0];
       if (!fravaer) throw new Error('Fravær ikke fundet');
 
-      // Sæt end_date til I GÅR så læreren ikke fremstår fraværende resten af i dag
-      // Sæt end_date til dagen FØR raskmelding eller dagen FØR fraværets start
-      // (det mindste af de to) — sikrer at fraværet ikke fremstår aktivt
-      // på nogen kalenderdag efter raskmelding.
+      // Sæt end_date til I GÅR så læreren ikke fremstår fraværende resten af i dag,
+      // men stadig vises som fraværende på de dage der faktisk var i fraværsperioden.
       await client.query(
-        "UPDATE fravaer SET end_date = LEAST(CURRENT_DATE - 1, start_date - 1) WHERE id = $1",
+        "UPDATE fravaer SET end_date = CURRENT_DATE - 1 WHERE id = $1",
         [id]
       );
 
