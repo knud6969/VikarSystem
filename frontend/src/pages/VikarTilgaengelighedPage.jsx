@@ -37,6 +37,7 @@ export default function VikarTilgaengelighedPage() {
   const [gemLoading, setGemLoading]       = useState(false);
   const [clipboard, setClipboard]         = useState(null);
   const [hoverDagIdx, setHoverDagIdx]     = useState(null);
+  const [draggingBlokId, setDraggingBlokId] = useState(null);
 
   const yScrollRef = useRef(null);
   const timeColRef = useRef(null);
@@ -55,7 +56,7 @@ export default function VikarTilgaengelighedPage() {
   const ugeNr   = getUgenummer(mandag);
   const idagStr = dagTilStreng(new Date());
 
-  const serverOptaget = (serverBlokke || []).filter(b => b.status === 'optaget');
+  const serverOptaget = (serverBlokke || []).filter(b => b.status === 'optaget' && b.id !== draggingBlokId);
   const alleBlokke = [
     ...serverOptaget,
     ...lokale.filter(lokal =>
@@ -276,6 +277,7 @@ export default function VikarTilgaengelighedPage() {
     document.body.style.userSelect = 'none';
 
     const dragId = uid();
+    setDraggingBlokId(blok.id);
     setLokale(prev => [...prev, { ...blok, id: dragId, _local: true }]);
 
     function onMove(ev) {
@@ -331,11 +333,12 @@ export default function VikarTilgaengelighedPage() {
       dragRef.current = null;
 
       setLokale(prev => prev.filter(b => b.id !== dragId));
+      setDraggingBlokId(null);
 
       if (hasMoved) {
         const nyDate = dagTilStreng(ugedage[finalDagIdx]);
         const harOverlap = stateRef.current.alleBlokke
-          .filter(b => b.date === nyDate && b.id !== blok.id)
+          .filter(b => b.date === nyDate && b.id !== blok.id && !b._local)
           .some(b => {
             const bS = strToMin(b.start_time.slice(0, 5));
             const bE = strToMin(b.end_time.slice(0, 5));
