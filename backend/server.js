@@ -15,6 +15,7 @@ const {
   indstillingerRouter,
   loenkoerselRouter,
   notifikationRouter,
+  klasserRouter,
 } = require('./routes/index');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/timer',           timerRouter);
 app.use('/indstillinger',   indstillingerRouter);
 app.use('/loenkoersel',     loenkoerselRouter);
 app.use('/notifikationer',  notifikationRouter);
+app.use('/klasser',         klasserRouter);
 
 // ── Sundhedstjek ─────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

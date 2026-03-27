@@ -143,6 +143,7 @@ export default function VikarLektionerPage() {
             <option value="alle">Alle lektioner</option>
             <option value="vikarer">Vikarer</option>
             <option value="laerere">Lærere</option>
+            <option value="klasser">Klasser</option>
           </select>
         </div>
 

@@ -16,6 +16,7 @@ import {
   TIMER_SLUT,
   DAGE,
 } from '../utils/kalenderUtils';
+import DagOversigt from '../components/kalender/DagOversigt';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import BekræftModal from '../components/common/BekræftModal';
@@ -162,7 +163,7 @@ export default function AdminKalenderPage() {
     : visPersoner.map((person) => ({ person, dag: ugedage[valgtDagIdx] }));
 
   const colW       = erUgeOversigt ? UGEOVERSIGT_COL_W : COL_W;
-  const totalGridW = gitterKolonner.length * colW;
+  const totalGridW = erUgeOversigt ? '100%' : gitterKolonner.length * colW;
 
   // Fravær for valgt dag (normal) eller alle dage (ugeoversigt håndteres per kolonne)
   const valgtDagStr = ugedage[valgtDagIdx] ? dagTilStreng(ugedage[valgtDagIdx]) : null;
@@ -441,11 +442,16 @@ export default function AdminKalenderPage() {
               <option value="alle">Alle</option>
               <option value="laerere">Lærere</option>
               <option value="vikarer">Vikarer</option>
+              <option value="klasser">Klasser</option>
             </select>
           )}
         </div>
 
         {/* Fravær vises kun som rødt ring på avatar — ingen badges øverst */}
+
+        {filterType === 'klasser' ? (
+          <DagOversigt filter="klasser" />
+        ) : (<>
 
         {/* Enkelt-person filter-info */}
         {!erUgeOversigt && valgtPersonId && (
@@ -499,7 +505,7 @@ export default function AdminKalenderPage() {
                     return (
                       <div
                         key={i}
-                        style={{ width: colW, minWidth: colW }}
+                        style={{ flex: 1, minWidth: colW }}
                         className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0"
                       >
                         <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : 'text-slate-500'}`}>
@@ -583,6 +589,7 @@ export default function AdminKalenderPage() {
                         <GitterKolonne
                           key={i}
                           colW={colW}
+                          stretch
                           lektioner={dagLektioner}
                           tildelinger={tildelinger}
                           erFravaer={erFravaer}
@@ -647,6 +654,7 @@ export default function AdminKalenderPage() {
             </div>
           )}
         </div>
+        </>)}
       </div>
 
       {/* ── Modaler (uden for kalender-layoutet) ─────────── */}
@@ -737,11 +745,11 @@ export default function AdminKalenderPage() {
 /* ────────────────────────────────────────────────────────────
  * GitterKolonne — én tidssøjle-kolonne i gitteret
  * ──────────────────────────────────────────────────────────── */
-function GitterKolonne({ colW, lektioner, tildelinger, erFravaer, lektionerMedBeskeder = [], dagOptaget = [], onLektionKlik }) {
+function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lektionerMedBeskeder = [], dagOptaget = [], onLektionKlik }) {
   return (
     <div
-      className={`relative border-r border-slate-200 last:border-r-0 shrink-0 ${erFravaer ? 'bg-red-50/30' : ''}`}
-      style={{ width: colW, height: TIMER.length * TIME_PX }}
+      className={`relative border-r border-slate-200 last:border-r-0 ${erFravaer ? 'bg-red-50/30' : ''}`}
+      style={stretch ? { flex: 1, minWidth: colW, height: TIMER.length * TIME_PX } : { width: colW, height: TIMER.length * TIME_PX }}
     >
       {/* Timegrid-linjer */}
       {TIMER.map(t => (

@@ -18,6 +18,7 @@ export default defineConfig({
       '/indstillinger':   'http://localhost:3000',
       '/loenkoersel':     'http://localhost:3000',
       '/notifikationer':  'http://localhost:3000',
+      '/klasser':         'http://localhost:3000',
     },
   },
 });

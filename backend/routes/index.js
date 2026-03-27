@@ -89,6 +89,12 @@ const NotifikationController = require('../controllers/notifikationController');
 notifikationRouter.get('/',            requireAuth, NotifikationController.getForMig);
 notifikationRouter.patch('/:id/laest', requireAuth, NotifikationController.markerLaest);
 
+// ── Klasser ──────────────────────────────────────────────────────────────────
+const klasserRouter     = express.Router();
+const KlasserController = require('../controllers/klasserController');
+
+klasserRouter.get('/', requireAuth, KlasserController.getAll);
+
 module.exports = {
   vikarRouter,
   laererRouter,
@@ -101,4 +107,5 @@ module.exports = {
   indstillingerRouter,
   loenkoerselRouter,
   notifikationRouter,
+  klasserRouter,
 };

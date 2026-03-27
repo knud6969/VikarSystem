@@ -12,6 +12,24 @@ const BeskedController = {
       const lessonId = parseInt(req.params.lessonId, 10);
       if (isNaN(lessonId)) return res.status(400).json({ error: 'Ugyldig lektion' });
 
+      if (req.bruger.rolle !== 'admin') {
+        const involveretRes = await pool.query(`
+          SELECT la.user_id AS laerer_bruger_id, v.user_id AS vikar_bruger_id
+          FROM lektioner l
+          JOIN laerere la ON la.id = l.teacher_id
+          LEFT JOIN tildelinger ti ON ti.lesson_id = l.id
+          LEFT JOIN vikarer v ON v.id = ti.substitute_id
+          WHERE l.id = $1
+        `, [lessonId]);
+
+        if (!involveretRes.rows.length) return res.status(403).json({ error: 'Ingen adgang' });
+
+        const { laerer_bruger_id, vikar_bruger_id } = involveretRes.rows[0];
+        if (req.bruger.id !== laerer_bruger_id && req.bruger.id !== vikar_bruger_id) {
+          return res.status(403).json({ error: 'Ingen adgang' });
+        }
+      }
+
       const beskeder = await BeskedModel.getForLektion(lessonId);
       res.json(beskeder);
     } catch (err) {
