@@ -133,7 +133,7 @@ export default function VikarTilgaengelighedPage() {
   function getY(e, dagIdx) {
     const col = colRefs.current[dagIdx];
     if (!col) return 0;
-    return e.clientY - col.getBoundingClientRect().top + (yScrollRef.current?.scrollTop || 0);
+    return e.clientY - col.getBoundingClientRect().top;
   }
 
   function blokkeForDag(dagStr) {
@@ -222,8 +222,7 @@ export default function VikarTilgaengelighedPage() {
   function handleDblClick(e, dagIdx) {
     e.preventDefault();
     const y        = getY(e, dagIdx);
-    const midtMin  = yToMin(y);
-    const startMin = clamp(midtMin - 30, TIMER_START * 60, TIMER_SLUT * 60 - 60);
+    const startMin = clamp(yToMin(y), TIMER_START * 60, TIMER_SLUT * 60 - 60);
     const slutMin  = startMin + 60;
     const dato     = dagTilStreng(ugedage[dagIdx]);
 
