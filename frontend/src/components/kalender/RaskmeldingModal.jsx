@@ -53,7 +53,6 @@ export default function RaskmeldingModal({ laerer, onTilbage, onSuccess }) {
             disabled={loading}
             className="w-full text-left flex items-start gap-3 px-4 py-3.5 rounded-xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors disabled:opacity-50"
           >
-            <span className="text-xl leading-none mt-0.5">✅</span>
             <div>
               <p className="text-sm font-semibold text-emerald-900">Behold vikardækning</p>
               <p className="text-xs text-emerald-600 mt-0.5">
@@ -68,7 +67,6 @@ export default function RaskmeldingModal({ laerer, onTilbage, onSuccess }) {
             disabled={loading}
             className="w-full text-left flex items-start gap-3 px-4 py-3.5 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-50"
           >
-            <span className="text-xl leading-none mt-0.5">🗑</span>
             <div>
               <p className="text-sm font-semibold text-slate-800">Fjern alle tildelinger</p>
               <p className="text-xs text-slate-500 mt-0.5">

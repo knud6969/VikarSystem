@@ -42,6 +42,19 @@ export function beregnPosition(startTime, endTime, timePx = 64) {
   return { top, height };
 }
 
+export function getMaanedStr(offset = 0) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d.toISOString().slice(0, 7);
+}
+
+export function formatMaaned(maaned) {
+  const [year, month] = maaned.split('-').map(Number);
+  const d = new Date(year, month - 1, 1);
+  return d.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
+}
+
 export function getUgenummer(dato) {
   const d = new Date(dato);
   d.setHours(0, 0, 0, 0);

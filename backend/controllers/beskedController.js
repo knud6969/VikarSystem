@@ -55,7 +55,6 @@ const BeskedController = {
         if (lektionRes.rows.length) {
           const l           = lektionRes.rows[0];
           const afsenderRolle = req.bruger.rolle;
-          console.log('[Notif] besked: afsenderRolle=', afsenderRolle, 'vikar_bruger_id=', l.vikar_bruger_id, 'laerer_bruger_id=', l.laerer_bruger_id);
           const dato        = new Date(l.start_time).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
 
           if (afsenderRolle === 'laerer' && l.vikar_bruger_id) {

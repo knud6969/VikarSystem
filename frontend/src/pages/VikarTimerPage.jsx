@@ -2,19 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { timerService }       from '../api/timerService';
 import { loenkoerselService } from '../api/loenkoerselService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-
-function getMaanedStr(offset = 0) {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offset);
-  return d.toISOString().slice(0, 7);
-}
-
-function formatMaaned(maaned) {
-  const [year, month] = maaned.split('-').map(Number);
-  const d = new Date(year, month - 1, 1);
-  return d.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
-}
+import { getMaanedStr, formatMaaned } from '../utils/kalenderUtils';
 
 function formatTimer(timer) {
   const t = parseFloat(timer) || 0;
@@ -84,13 +72,13 @@ export default function VikarTimerPage() {
       {loading ? (
         <LoadingSpinner tekst="Henter timer…" />
       ) : fejl ? (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">⚠ {fejl}</div>
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{fejl}</div>
       ) : (
         <>
           {/* Lønkørsel-banner */}
           {kørsel && (
             <div className="flex items-center gap-2 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs text-slate-500">
-              <span>🔒</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
               <span>
                 Måned låst — lønkørsel sendt{' '}
                 {new Date(kørsel.koert_at).toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}

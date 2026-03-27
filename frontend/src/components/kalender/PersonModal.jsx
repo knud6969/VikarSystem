@@ -68,7 +68,6 @@ export default function PersonModal({
 
           {/* Ugeoversigt — altid */}
           <HandlingsKnap
-            ikon="📅"
             label="Vis ugeoversigt"
             beskrivelse="Se hele ugen for denne person"
             onClick={onUgeoversigt}
@@ -78,7 +77,6 @@ export default function PersonModal({
           {/* Lærer: sygemelding */}
           {erLaerer && !erFravaerende && (
             <HandlingsKnap
-              ikon="🤒"
               label="Registrer fravær"
               beskrivelse="Sygemelding eller kursus"
               onClick={onSygemelding}
@@ -89,7 +87,6 @@ export default function PersonModal({
           {/* Lærer: raskmelding */}
           {erLaerer && erFravaerende && (
             <HandlingsKnap
-              ikon="✅"
               label="Raskmelding"
               beskrivelse="Marker læreren som aktiv igen"
               onClick={onRaskmelding}
@@ -104,7 +101,7 @@ export default function PersonModal({
   );
 }
 
-function HandlingsKnap({ ikon, label, beskrivelse, onClick, variant }) {
+function HandlingsKnap({ label, beskrivelse, onClick, variant }) {
   const variantKlasser = {
     primary: 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900',
     danger:  'border-red-200 bg-red-50 hover:bg-red-100 text-red-900',
@@ -117,7 +114,6 @@ function HandlingsKnap({ ikon, label, beskrivelse, onClick, variant }) {
       onClick={onClick}
       className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors ${variantKlasser[variant]}`}
     >
-      <span className="text-lg leading-none">{ikon}</span>
       <div>
         <p className="text-sm font-medium leading-tight">{label}</p>
         <p className="text-xs opacity-60 mt-0.5">{beskrivelse}</p>

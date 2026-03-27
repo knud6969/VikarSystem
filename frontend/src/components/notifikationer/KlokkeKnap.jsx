@@ -2,13 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { notifikationService } from '../../api/notifikationService';
 
-const TYPE_IKON = {
-  tildeling_oprettet: '✅',
-  tildeling_fjernet:  '❌',
-  vikar_tildelt:      '✅',
-  vikar_fjernet:      '❌',
-  ny_besked:          '💬',
-};
 
 export default function KlokkeKnap() {
   const [notifikationer, setNotifikationer] = useState([]);
@@ -105,9 +98,6 @@ export default function KlokkeKnap() {
                     notif.laest ? 'opacity-50' : ''
                   }`}
                 >
-                  <span className="text-base leading-none mt-0.5 shrink-0">
-                    {TYPE_IKON[notif.type] ?? '🔔'}
-                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={`text-xs font-medium leading-snug text-slate-800 ${!notif.laest ? 'font-semibold' : ''}`}>

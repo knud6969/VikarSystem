@@ -43,7 +43,6 @@ const TildelingController = {
         if (lektionRes.rows.length && vikarRes.rows.length) {
           const lektion    = lektionRes.rows[0];
           const vikar      = vikarRes.rows[0];
-          console.log('[Notif] tildel: vikar.user_id=', vikar.user_id, 'laerer_bruger_id=', lektion.laerer_bruger_id);
           const dato       = new Date(lektion.start_time).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
           const tid        = new Date(lektion.start_time).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
 
@@ -65,7 +64,6 @@ const TildelingController = {
             link: `/laerer/lektioner?lessonId=${lesson_id}`,
           });
         }
-        console.log('[Notif] tildel: notifikationer oprettet OK');
       } catch (notifErr) {
         console.error('Notifikation (tildel) fejlede:', notifErr);
       }
@@ -102,7 +100,6 @@ const TildelingController = {
 
       // Notifikationer
       try {
-        console.log('[Notif] fjern: tildelingRes.rows.length=', tildelingRes.rows.length);
         if (tildelingRes.rows.length) {
           const r    = tildelingRes.rows[0];
           const dato = new Date(r.start_time).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -124,7 +121,6 @@ const TildelingController = {
             link: `/laerer/lektioner?lessonId=${r.lesson_id}`,
           });
         }
-        console.log('[Notif] fjern: notifikationer oprettet OK');
       } catch (notifErr) {
         console.error('Notifikation (fjern) fejlede:', notifErr);
       }

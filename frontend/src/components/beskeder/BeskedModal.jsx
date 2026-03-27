@@ -106,7 +106,6 @@ export default function BeskedModal({ lektion, onLuk }) {
           {loading && <p className="text-center text-xs text-slate-400 py-8">Henter beskeder…</p>}
           {!loading && beskeder.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-2xl mb-2">💬</p>
               <p className="text-sm text-slate-400">Ingen beskeder endnu.</p>
               <p className="text-xs text-slate-300 mt-1">Skriv den første besked herunder.</p>
             </div>

@@ -3,19 +3,7 @@ import { timerService }        from '../api/timerService';
 import { indstillingerService } from '../api/indstillingerService';
 import { loenkoerselService }  from '../api/loenkoerselService';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-
-function getMaanedStr(offset = 0) {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offset);
-  return d.toISOString().slice(0, 7);
-}
-
-function formatMaaned(maaned) {
-  const [year, month] = maaned.split('-').map(Number);
-  const d = new Date(year, month - 1, 1);
-  return d.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
-}
+import { getMaanedStr, formatMaaned } from '../utils/kalenderUtils';
 
 function formatTimer(val) {
   const t = parseFloat(val) || 0;
@@ -169,7 +157,7 @@ export default function AdminTimestyringPage() {
           >
             Gem satser
           </button>
-          {gemSatsOk  && <span className="text-xs text-emerald-600">Gemt ✓</span>}
+          {gemSatsOk  && <span className="text-xs text-emerald-600">Gemt</span>}
           {gemSatsFejl && <span className="text-xs text-red-500">{gemSatsFejl}</span>}
         </div>
       </div>
@@ -201,7 +189,7 @@ export default function AdminTimestyringPage() {
           {/* Advarsel: sidst i måneden og ikke kørt */}
           {erIndevaerendeMaaned && erSidstIMaaned && !kørsel && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800">
-              <span>⚠</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0 mt-0.5"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
               <span>Det er sidst i måneden — husk at køre lønkørsel for {formatMaaned(maaned)}.</span>
             </div>
           )}
@@ -210,7 +198,7 @@ export default function AdminTimestyringPage() {
           {kørsel ? (
             <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5">
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>🔒</span>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
                 <span>
                   Lønkørsel sendt{' '}
                   {new Date(kørsel.koert_at).toLocaleDateString('da-DK', { day: 'numeric', month: 'long' })}
