@@ -3,7 +3,7 @@ const pool = require('../config/db');
 const LektionModel = {
   async getAll() {
     const result = await pool.query(`
-      SELECT l.*, la.name AS laerer_navn, k.name AS klasse_navn,
+      SELECT l.*, la.name AS laerer_navn, la.type AS laerer_type, k.name AS klasse_navn,
              v.id AS vikar_id, v.name AS vikar_navn
       FROM lektioner l
       JOIN laerere la ON la.id = l.teacher_id

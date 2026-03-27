@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import GenvejModal from '../common/GenvejModal';
 import KlokkeKnap from '../notifikationer/KlokkeKnap';
@@ -22,6 +22,7 @@ const LAERER_LINKS = [
 export default function AppLayout() {
   const { bruger, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [visGenveje, setVisGenveje] = useState(false);
 
   const links =
@@ -33,9 +34,12 @@ export default function AppLayout() {
     <div className="min-h-screen bg-slate-50 font-sans">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-full px-4 h-14 flex items-center justify-between">
-          <span className="text-sm font-semibold tracking-widest uppercase text-slate-800 select-none">
+          <button
+            onClick={() => navigate(links[0].to, { state: { reset: Date.now() } })}
+            className="text-sm font-semibold tracking-widest uppercase text-slate-800 hover:opacity-70 transition-opacity"
+          >
             Vikar<span className="text-blue-600">System</span>
-          </span>
+          </button>
 
           <nav className="hidden md:flex items-center gap-1">
             {links.map(({ to, label }) => (
@@ -80,7 +84,7 @@ export default function AppLayout() {
       </header>
 
       <main className="px-4 py-4">
-        <Outlet />
+        <Outlet key={location.state?.reset ?? 0} />
       </main>
 
       {visGenveje && <GenvejModal onLuk={() => setVisGenveje(false)} />}

@@ -362,7 +362,7 @@ export default function AdminKalenderPage() {
         )}
 
         {/* ── Toolbar ───────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap shrink-0">
+        <div className={`flex items-center justify-between mb-3 gap-3 flex-wrap shrink-0 ${filterType === 'klasser' ? 'hidden' : ''}`}>
 
           {/* Venstre: uge-navigation */}
           <div className="flex items-center gap-2">

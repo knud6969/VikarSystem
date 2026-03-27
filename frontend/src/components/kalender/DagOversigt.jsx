@@ -513,7 +513,7 @@ function LektionDetalje({ lektion, tildeling, onLuk, visBesk, onBesked }) {
         <InfoRække label="Dato"   value={start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })} />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label="Lærer"  value={lektion.laerer_navn || '—'} />
+        <InfoRække label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'} value={lektion.laerer_navn || '—'} />
         {tildeling?.vikar_navn && (
           <InfoRække label="Vikar" value={tildeling.vikar_navn} />
         )}
