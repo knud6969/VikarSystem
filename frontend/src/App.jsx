@@ -9,6 +9,7 @@ import VikarLektionerPage from './pages/VikarLektionerPage';
 import VikarTilgaengelighedPage from './pages/VikarTilgaengelighedPage';
 import VikarTimerPage from './pages/VikarTimerPage';
 import LaererLektionerPage from './pages/LaererLektionerPage';
+import MineOplysningerPage from './pages/MineOplysningerPage';
 import { UautorisPage } from './pages/PlaceholderPages';
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="lektioner"       element={<VikarLektionerPage />} />
             <Route path="tilgaengelighed" element={<VikarTilgaengelighedPage />} />
             <Route path="timer"           element={<VikarTimerPage />} />
+            <Route path="oplysninger"     element={<MineOplysningerPage />} />
           </Route>
 
           {/* Lærer */}
@@ -58,7 +60,8 @@ export default function App() {
             }
           >
             <Route index element={<Navigate to="lektioner" replace />} />
-            <Route path="lektioner" element={<LaererLektionerPage />} />
+            <Route path="lektioner"   element={<LaererLektionerPage />} />
+            <Route path="oplysninger" element={<MineOplysningerPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />

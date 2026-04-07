@@ -6,6 +6,8 @@ import { vikarService } from '../api/vikarService';
 import { useApi } from '../hooks/useApi';
 import BeskedModal from '../components/beskeder/BeskedModal';
 import { fetchLektionerMedBeskeder } from '../api/beskedFetch';
+import KontaktTooltip from '../components/common/KontaktTooltip';
+import PersonKontaktModal from '../components/common/PersonKontaktModal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import DagOversigt from '../components/kalender/DagOversigt';
@@ -242,9 +244,15 @@ export default function VikarLektionerPage() {
                             <p className="font-semibold text-xs leading-tight truncate text-emerald-800">
                               {lektion.subject}
                             </p>
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/60 font-bold shrink-0 text-emerald-700" style={{ fontSize: '9px' }}>
-                              {lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
-                            </span>
+                            <KontaktTooltip
+                              navn={lektion.laerer_navn}
+                              email={lektion.laerer_email}
+                              telefon={lektion.laerer_phone}
+                            >
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/60 font-bold shrink-0 text-emerald-700" style={{ fontSize: '9px' }}>
+                                {lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
+                              </span>
+                            </KontaktTooltip>
                           </div>
                           <p className="text-xs opacity-60 truncate text-emerald-700">{lektion.klasse_navn}</p>
                           {height > 44 && (
@@ -286,6 +294,7 @@ export default function VikarLektionerPage() {
 }
 
 function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked }) {
+  const [kontaktPerson, setKontaktPerson] = useState(null);
   const start   = new Date(lektion.start_time);
   const slut    = new Date(lektion.end_time);
   const fmt     = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -308,7 +317,17 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
         <InfoRække label="Dato" value={start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })} />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'} value={lektion.laerer_navn || '—'} />
+        <InfoRække
+          label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'}
+          value={lektion.laerer_navn || '—'}
+          onClick={lektion.laerer_navn ? () => setKontaktPerson({
+            navn: lektion.laerer_navn,
+            rolle: lektion.laerer_type === 'paedagog' ? 'paedagog' : 'laerer',
+            email: lektion.laerer_email,
+            personalEmail: lektion.laerer_personal_email,
+            telefon: lektion.laerer_phone,
+          }) : undefined}
+        />
         {visBesked && (
           <button onClick={onAabnBeskeder}
             className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 transition-colors relative">
@@ -325,15 +344,28 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
           </div>
         )}
       </div>
+
+      {kontaktPerson && (
+        <PersonKontaktModal person={kontaktPerson} onLuk={() => setKontaktPerson(null)} />
+      )}
     </div>
   );
 }
 
-function InfoRække({ label, value }) {
+function InfoRække({ label, value, onClick }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <span className="text-xs text-slate-400 shrink-0">{label}</span>
-      <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      {onClick ? (
+        <button
+          onClick={onClick}
+          className="text-xs text-right text-blue-600 hover:underline capitalize"
+        >
+          {value}
+        </button>
+      ) : (
+        <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      )}
     </div>
   );
 }

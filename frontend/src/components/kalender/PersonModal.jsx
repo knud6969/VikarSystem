@@ -44,11 +44,9 @@ export default function PersonModal({
           </div>
           <div className="flex-1 min-w-0 pt-0.5">
             <h2 className="text-base font-semibold text-slate-900 leading-tight truncate">{person.name}</h2>
-            <p className="text-xs text-slate-400 mt-0.5 capitalize">
+            <p className="text-xs text-slate-400 mt-0.5">
               {erPaedagog ? 'Pædagog' : erLaerer ? 'Lærer' : 'Vikar'}
-              {person.email && ` · ${person.email}`}
             </p>
-            {person.phone && <p className="text-xs text-slate-400">{person.phone}</p>}
           </div>
           <button onClick={onLuk} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0">×</button>
         </div>
@@ -59,6 +57,15 @@ export default function PersonModal({
             <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
             {STATUS_LABELS[person.status] ?? person.status}
           </span>
+        </div>
+
+        <div className="h-px bg-slate-100 mx-6" />
+
+        {/* Kontaktoplysninger */}
+        <div className="px-6 py-4 space-y-3">
+          <KontaktRække ikon="mail" label="Arbejdsmail" value={person.email} href={person.email ? `mailto:${person.email}` : null} />
+          <KontaktRække ikon="mail" label="Personlig mail" value={person.personal_email} href={person.personal_email ? `mailto:${person.personal_email}` : null} />
+          <KontaktRække ikon="phone" label="Telefon" value={person.phone} href={person.phone ? `tel:${person.phone}` : null} />
         </div>
 
         <div className="h-px bg-slate-100 mx-6" />
@@ -96,6 +103,37 @@ export default function PersonModal({
 
           {/* Vikarer: ingen ekstra knapper */}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function KontaktRække({ ikon, label, value, href }) {
+  const mailSvg = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-3.5 h-3.5 text-slate-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+  );
+  const phoneSvg = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-3.5 h-3.5 text-slate-400">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+    </svg>
+  );
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center shrink-0">
+        {ikon === 'phone' ? phoneSvg : mailSvg}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-400 leading-none mb-0.5">{label}</p>
+        {value ? (
+          <a href={href} className="text-xs text-slate-700 hover:text-blue-600 transition-colors truncate block">
+            {value}
+          </a>
+        ) : (
+          <p className="text-xs text-slate-300 italic">Ikke registreret</p>
+        )}
       </div>
     </div>
   );

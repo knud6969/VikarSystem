@@ -7,6 +7,7 @@ const VikarController = require('../controllers/vikarController');
 
 vikarRouter.get('/ledige', requireAuth, requireRolle('admin'), VikarController.getLedige);
 vikarRouter.get('/mig',    requireAuth, requireRolle('vikar'), VikarController.getMig);
+vikarRouter.put('/mig',    requireAuth, requireRolle('vikar'), VikarController.updateMig);
 vikarRouter.get('/',       requireAuth,                        VikarController.getAll);
 vikarRouter.get('/:id',    requireAuth,                        VikarController.getById);
 

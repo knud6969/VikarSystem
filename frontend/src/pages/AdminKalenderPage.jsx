@@ -24,6 +24,7 @@ import PersonModal from '../components/kalender/PersonModal';
 import SygemeldingModal from '../components/kalender/SygemeldingModal';
 import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
 import BeskedModal from '../components/beskeder/BeskedModal';
+import PersonKontaktModal from '../components/common/PersonKontaktModal';
 import { fetchLektionerMedBeskeder } from '../api/beskedFetch';
 
 const TIME_PX       = 64;
@@ -843,7 +844,8 @@ function DetaljePanelIndhold({
   lektion, vikarListe, henterVikarer, actionLoading, actionFejl,
   onLuk, onHentVikarer, onTildelVikar, onTildelAlle, onFjernTildeling, onBeskeder,
 }) {
-  const [tildelAlle, setTildelAlle] = useState(false);
+  const [tildelAlle,    setTildelAlle]    = useState(false);
+  const [kontaktPerson, setKontaktPerson] = useState(null);
   const start  = new Date(lektion.start_time);
   const slut   = new Date(lektion.end_time);
   const fmt    = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -867,9 +869,35 @@ function DetaljePanelIndhold({
         <InfoRække label="Klasse" value={lektion.klasse_navn || '—'} bold />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label="Lærer"  value={lektion.laerer_navn || '—'} />
-        {lektion.tildeling && <InfoRække label="Vikar" value={lektion.tildeling.vikar_navn} />}
+        <InfoRække
+          label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'}
+          value={lektion.laerer_navn || '—'}
+          onClick={lektion.laerer_navn ? () => setKontaktPerson({
+            navn: lektion.laerer_navn,
+            rolle: lektion.laerer_type === 'paedagog' ? 'paedagog' : 'laerer',
+            email: lektion.laerer_email,
+            personalEmail: lektion.laerer_personal_email,
+            telefon: lektion.laerer_phone,
+          }) : undefined}
+        />
+        {lektion.tildeling && (
+          <InfoRække
+            label="Vikar"
+            value={lektion.tildeling.vikar_navn}
+            onClick={() => setKontaktPerson({
+              navn: lektion.tildeling.vikar_navn,
+              rolle: 'vikar',
+              email: lektion.tildeling.vikar_email,
+              personalEmail: lektion.tildeling.vikar_personal_email,
+              telefon: lektion.tildeling.vikar_phone,
+            })}
+          />
+        )}
       </div>
+
+      {kontaktPerson && (
+        <PersonKontaktModal person={kontaktPerson} onLuk={() => setKontaktPerson(null)} />
+      )}
 
       <div className="px-4 py-4 space-y-2">
         {actionFejl && (
@@ -950,13 +978,19 @@ function DetaljePanelIndhold({
   );
 }
 
-function InfoRække({ label, value, bold }) {
+function InfoRække({ label, value, bold, onClick }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <span className="text-xs text-slate-400 shrink-0">{label}</span>
-      <span className={`text-xs text-right ${bold ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
-        {value}
-      </span>
+      {onClick ? (
+        <button onClick={onClick} className="text-xs text-right text-blue-600 hover:underline">
+          {value}
+        </button>
+      ) : (
+        <span className={`text-xs text-right ${bold ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
+          {value}
+        </span>
+      )}
     </div>
   );
 }

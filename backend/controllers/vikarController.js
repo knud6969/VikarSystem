@@ -1,4 +1,5 @@
-const VikarModel = require('../models/vikarModel');
+const VikarModel   = require('../models/vikarModel');
+const BrugerModel  = require('../models/brugerModel');
 
 const VikarController = {
   async getAll(req, res) {
@@ -33,6 +34,21 @@ const VikarController = {
       res.json(vikar);
     } catch (err) {
       console.error('VikarController.getMig:', err);
+      res.status(500).json({ error: 'Serverfejl' });
+    }
+  },
+
+  async updateMig(req, res) {
+    try {
+      const { phone, personal_email } = req.body;
+      await Promise.all([
+        VikarModel.updateMig(req.bruger.id, { phone }),
+        BrugerModel.updatePersonalEmail(req.bruger.id, personal_email),
+      ]);
+      const opdateret = await VikarModel.getByUserId(req.bruger.id);
+      res.json(opdateret);
+    } catch (err) {
+      console.error('VikarController.updateMig:', err);
       res.status(500).json({ error: 'Serverfejl' });
     }
   },

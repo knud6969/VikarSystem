@@ -1,4 +1,5 @@
-const LaererModel = require('../models/laererModel');
+const LaererModel  = require('../models/laererModel');
+const BrugerModel  = require('../models/brugerModel');
 
 const LaererController = {
   // ── Admin CRUD ────────────────────────────────────────────
@@ -56,6 +57,22 @@ const LaererController = {
   },
 
   // ── Lærer-login ───────────────────────────────────────────
+  async updateMig(req, res) {
+    try {
+      const { phone, personal_email } = req.body;
+      await Promise.all([
+        LaererModel.updateMig(req.bruger.id, { phone }),
+        BrugerModel.updatePersonalEmail(req.bruger.id, personal_email),
+      ]);
+      const laerer = await LaererModel.getByUserId(req.bruger.id);
+      const lektioner = await LaererModel.getLektioner(laerer.id);
+      res.json({ ...laerer, lektioner });
+    } catch (err) {
+      console.error('LaererController.updateMig:', err);
+      res.status(500).json({ error: 'Serverfejl' });
+    }
+  },
+
   async getMig(req, res) {
     try {
       const laerer = await LaererModel.getByUserId(req.bruger.id);

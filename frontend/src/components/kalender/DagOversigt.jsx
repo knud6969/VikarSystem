@@ -12,6 +12,8 @@ import { klasserService } from '../../api/klasserService';
 import { useApi } from '../../hooks/useApi';
 import BeskedModal from '../beskeder/BeskedModal';
 import LoadingSpinner from '../common/LoadingSpinner';
+import KontaktTooltip from '../common/KontaktTooltip';
+import PersonKontaktModal from '../common/PersonKontaktModal';
 import {
   getMandagForUge, getUgedage, getUgenummer,
   beregnPosition, dagTilStreng, formatDagLabel,
@@ -329,9 +331,15 @@ export default function DagOversigt({ filter }) {
                   onClick={() => setAktivPersonModal(person)}
                   className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold mb-0.5 ${person.farve}`}>
-                    {getInitialer(person.name)}
-                  </div>
+                  <KontaktTooltip
+                    navn={person.name}
+                    email={person.email}
+                    telefon={person.phone}
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold mb-0.5 ${person.farve}`}>
+                      {getInitialer(person.name)}
+                    </div>
+                  </KontaktTooltip>
                   <span className="text-xs font-semibold leading-none text-slate-600">
                     {getInitialer(person.name)}
                   </span>
@@ -398,6 +406,12 @@ export default function DagOversigt({ filter }) {
                 <p className="text-xs text-slate-400 mt-0.5">
                   {aktivPersonModal.type === 'vikar' ? 'Vikar' : aktivPersonModal.dbType === 'paedagog' ? 'Pædagog' : 'Lærer'}
                 </p>
+                {aktivPersonModal.email && (
+                  <p className="text-xs text-slate-500 mt-1 truncate">{aktivPersonModal.email}</p>
+                )}
+                {aktivPersonModal.phone && (
+                  <p className="text-xs text-slate-500">{aktivPersonModal.phone}</p>
+                )}
               </div>
               <button onClick={() => setAktivPersonModal(null)} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0">×</button>
             </div>
@@ -462,15 +476,21 @@ function GitterKolonne({ colW, erUgeMode, lektioner, tildelinger, valgtLektionId
               <p className="font-semibold text-xs leading-tight truncate" style={{ color: farve.text }}>
                 {lektion.subject}
               </p>
-              <span
-                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/50 font-bold shrink-0"
-                style={{ color: farve.text, fontSize: '9px' }}
+              <KontaktTooltip
+                navn={tildeling ? tildeling.vikar_navn : lektion.laerer_navn}
+                email={tildeling ? tildeling.vikar_email : lektion.laerer_email}
+                telefon={tildeling ? tildeling.vikar_phone : lektion.laerer_phone}
               >
-                {tildeling
-                  ? tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
-                  : lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
-                }
-              </span>
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/50 font-bold shrink-0"
+                  style={{ color: farve.text, fontSize: '9px' }}
+                >
+                  {tildeling
+                    ? tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
+                    : lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
+                  }
+                </span>
+              </KontaktTooltip>
             </div>
             <p className="text-xs opacity-60 truncate" style={{ color: farve.text }}>
               {lektion.klasse_navn}
@@ -483,6 +503,7 @@ function GitterKolonne({ colW, erUgeMode, lektioner, tildelinger, valgtLektionId
 }
 
 function LektionDetalje({ lektion, tildeling, onLuk, visBesk, onBesked }) {
+  const [kontaktPerson, setKontaktPerson] = useState(null);
   const start      = new Date(lektion.start_time);
   const slut       = new Date(lektion.end_time);
   const fmt        = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -513,9 +534,29 @@ function LektionDetalje({ lektion, tildeling, onLuk, visBesk, onBesked }) {
         <InfoRække label="Dato"   value={start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })} />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'} value={lektion.laerer_navn || '—'} />
+        <InfoRække
+          label={lektion.laerer_type === 'paedagog' ? 'Pædagog' : 'Lærer'}
+          value={lektion.laerer_navn || '—'}
+          onClick={lektion.laerer_navn ? () => setKontaktPerson({
+            navn: lektion.laerer_navn,
+            rolle: lektion.laerer_type === 'paedagog' ? 'paedagog' : 'laerer',
+            email: lektion.laerer_email,
+            personalEmail: lektion.laerer_personal_email,
+            telefon: lektion.laerer_phone,
+          }) : undefined}
+        />
         {tildeling?.vikar_navn && (
-          <InfoRække label="Vikar" value={tildeling.vikar_navn} />
+          <InfoRække
+            label="Vikar"
+            value={tildeling.vikar_navn}
+            onClick={() => setKontaktPerson({
+              navn: tildeling.vikar_navn,
+              rolle: 'vikar',
+              email: tildeling.vikar_email,
+              personalEmail: tildeling.vikar_personal_email,
+              telefon: tildeling.vikar_phone,
+            })}
+          />
         )}
         {visBesk && (
           <button
@@ -529,15 +570,25 @@ function LektionDetalje({ lektion, tildeling, onLuk, visBesk, onBesked }) {
           </button>
         )}
       </div>
+
+      {kontaktPerson && (
+        <PersonKontaktModal person={kontaktPerson} onLuk={() => setKontaktPerson(null)} />
+      )}
     </div>
   );
 }
 
-function InfoRække({ label, value }) {
+function InfoRække({ label, value, onClick }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <span className="text-xs text-slate-400 shrink-0">{label}</span>
-      <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      {onClick ? (
+        <button onClick={onClick} className="text-xs text-right text-blue-600 hover:underline capitalize">
+          {value}
+        </button>
+      ) : (
+        <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      )}
     </div>
   );
 }

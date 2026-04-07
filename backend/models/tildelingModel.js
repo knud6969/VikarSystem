@@ -3,12 +3,15 @@ const pool = require('../config/db');
 const TildelingModel = {
   async getAll() {
     const result = await pool.query(`
-      SELECT ti.*, v.name AS vikar_navn, l.subject, l.start_time, l.end_time,
+      SELECT ti.*, v.name AS vikar_navn, v.phone AS vikar_phone,
+             bv.email AS vikar_email, bv.personal_email AS vikar_personal_email,
+             l.subject, l.start_time, l.end_time,
              b.email AS tildelt_af_email
       FROM tildelinger ti
-      JOIN vikarer v  ON v.id  = ti.substitute_id
-      JOIN lektioner l ON l.id = ti.lesson_id
-      JOIN brugere b   ON b.id = ti.tildelt_af
+      JOIN vikarer v   ON v.id  = ti.substitute_id
+      JOIN brugere bv  ON bv.id = v.user_id
+      JOIN lektioner l ON l.id  = ti.lesson_id
+      JOIN brugere b   ON b.id  = ti.tildelt_af
       ORDER BY ti.assigned_at DESC
     `);
     return result.rows;

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import PersonKontaktModal from '../components/common/PersonKontaktModal';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
 import DagOversigt from '../components/kalender/DagOversigt';
@@ -304,6 +305,7 @@ export default function LaererLektionerPage() {
 }
 
 function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked }) {
+  const [kontaktPerson, setKontaktPerson] = useState(null);
   const start   = new Date(lektion.start_time);
   const slut    = new Date(lektion.end_time);
   const fmt     = d => d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
@@ -333,9 +335,29 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
         <InfoRække label="Dato"   value={start.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })} />
         <InfoRække label="Tid"    value={`${fmt(start)} – ${fmt(slut)}`} />
         <InfoRække label="Lokale" value={lektion.room || '—'} />
-        <InfoRække label="Lærer"  value={lektion.laerer_navn || '—'} />
+        <InfoRække
+          label="Lærer"
+          value={lektion.laerer_navn || '—'}
+          onClick={lektion.laerer_navn ? () => setKontaktPerson({
+            navn: lektion.laerer_navn,
+            rolle: lektion.laerer_type === 'paedagog' ? 'paedagog' : 'laerer',
+            email: lektion.laerer_email,
+            personalEmail: lektion.laerer_personal_email,
+            telefon: lektion.laerer_phone,
+          }) : undefined}
+        />
         {erDaekket && lektion.vikar_navn && (
-          <InfoRække label="Vikar" value={lektion.vikar_navn} />
+          <InfoRække
+            label="Vikar"
+            value={lektion.vikar_navn}
+            onClick={() => setKontaktPerson({
+              navn: lektion.vikar_navn,
+              rolle: 'vikar',
+              email: lektion.vikar_email,
+              personalEmail: lektion.vikar_personal_email,
+              telefon: lektion.vikar_phone,
+            })}
+          />
         )}
         {visBesked && (
           <button onClick={onAabnBeskeder}
@@ -348,15 +370,25 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
           </button>
         )}
       </div>
+
+      {kontaktPerson && (
+        <PersonKontaktModal person={kontaktPerson} onLuk={() => setKontaktPerson(null)} />
+      )}
     </div>
   );
 }
 
-function InfoRække({ label, value }) {
+function InfoRække({ label, value, onClick }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <span className="text-xs text-slate-400 shrink-0">{label}</span>
-      <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      {onClick ? (
+        <button onClick={onClick} className="text-xs text-right text-blue-600 hover:underline capitalize">
+          {value}
+        </button>
+      ) : (
+        <span className="text-xs text-right text-slate-700 capitalize">{value}</span>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ const pool = require('../config/db');
 const VikarModel = {
   async getAll() {
     const result = await pool.query(`
-      SELECT v.*, b.email, b.rolle
+      SELECT v.*, b.email, b.personal_email, b.rolle
       FROM vikarer v
       JOIN brugere b ON b.id = v.user_id
       ORDER BY v.name
@@ -22,9 +22,19 @@ const VikarModel = {
   },
 
   async getByUserId(userId) {
+    const result = await pool.query(`
+      SELECT v.*, b.email, b.personal_email
+      FROM vikarer v
+      JOIN brugere b ON b.id = v.user_id
+      WHERE v.user_id = $1
+    `, [userId]);
+    return result.rows[0] || null;
+  },
+
+  async updateMig(userId, { phone }) {
     const result = await pool.query(
-      'SELECT * FROM vikarer WHERE user_id = $1',
-      [userId]
+      'UPDATE vikarer SET phone = $1 WHERE user_id = $2 RETURNING *',
+      [phone ?? null, userId]
     );
     return result.rows[0] || null;
   },

@@ -4,15 +4,21 @@ const LaererModel = {
   // ── Admin CRUD ────────────────────────────────────────────
   async getAll() {
     const result = await pool.query(`
-      SELECT * FROM laerere ORDER BY name
+      SELECT la.*, br.email, br.personal_email
+      FROM laerere la
+      LEFT JOIN brugere br ON br.id = la.user_id
+      ORDER BY la.name
     `);
     return result.rows;
   },
 
   async getById(id) {
-    const result = await pool.query(
-      'SELECT * FROM laerere WHERE id = $1', [id]
-    );
+    const result = await pool.query(`
+      SELECT la.*, br.email
+      FROM laerere la
+      LEFT JOIN brugere br ON br.id = la.user_id
+      WHERE la.id = $1
+    `, [id]);
     return result.rows[0] || null;
   },
 
@@ -40,11 +46,19 @@ const LaererModel = {
   // ── Lærer-login ───────────────────────────────────────────
   async getByUserId(userId) {
     const result = await pool.query(`
-      SELECT la.*, br.email
+      SELECT la.*, br.email, br.personal_email
       FROM laerere la
       JOIN brugere br ON br.id = la.user_id
       WHERE la.user_id = $1
     `, [userId]);
+    return result.rows[0] || null;
+  },
+
+  async updateMig(userId, { phone }) {
+    const result = await pool.query(
+      'UPDATE laerere SET phone = $1 WHERE user_id = $2 RETURNING *',
+      [phone ?? null, userId]
+    );
     return result.rows[0] || null;
   },
 

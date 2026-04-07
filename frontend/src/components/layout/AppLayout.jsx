@@ -13,10 +13,12 @@ const VIKAR_LINKS = [
   { to: '/vikar/lektioner',       label: 'Mine lektioner'     },
   { to: '/vikar/tilgaengelighed', label: 'Min tilgængelighed' },
   { to: '/vikar/timer',           label: 'Mine timer'         },
+  { to: '/vikar/oplysninger',     label: 'Mine oplysninger'   },
 ];
 
 const LAERER_LINKS = [
-  { to: '/laerer/lektioner', label: 'Mine lektioner' },
+  { to: '/laerer/lektioner',   label: 'Mine lektioner'   },
+  { to: '/laerer/oplysninger', label: 'Mine oplysninger' },
 ];
 
 export default function AppLayout() {
