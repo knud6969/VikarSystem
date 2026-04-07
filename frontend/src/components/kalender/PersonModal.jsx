@@ -18,6 +18,7 @@ export default function PersonModal({
   onSygemelding,
   onRaskmelding,
   onUgeoversigt,
+  visPersonligMail = false,
 }) {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onLuk(); };
@@ -51,20 +52,24 @@ export default function PersonModal({
           <button onClick={onLuk} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0">×</button>
         </div>
 
-        {/* Status badge */}
-        <div className="px-6 pb-4">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusStyle.badge}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
-            {STATUS_LABELS[person.status] ?? person.status}
-          </span>
-        </div>
+        {/* Status badge — kun hvis personen har en status */}
+        {person.status && (
+          <div className="px-6 pb-4">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${statusStyle.badge}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+              {STATUS_LABELS[person.status] ?? person.status}
+            </span>
+          </div>
+        )}
 
         <div className="h-px bg-slate-100 mx-6" />
 
         {/* Kontaktoplysninger */}
         <div className="px-6 py-4 space-y-3">
           <KontaktRække ikon="mail" label="Arbejdsmail" value={person.email} href={person.email ? `mailto:${person.email}` : null} />
-          <KontaktRække ikon="mail" label="Personlig mail" value={person.personal_email} href={person.personal_email ? `mailto:${person.personal_email}` : null} />
+          {visPersonligMail && (
+            <KontaktRække ikon="mail" label="Personlig mail" value={person.personal_email} href={person.personal_email ? `mailto:${person.personal_email}` : null} />
+          )}
           <KontaktRække ikon="phone" label="Telefon" value={person.phone} href={person.phone ? `tel:${person.phone}` : null} />
         </div>
 
@@ -81,8 +86,8 @@ export default function PersonModal({
             variant="primary"
           />
 
-          {/* Lærer: sygemelding */}
-          {erLaerer && !erFravaerende && (
+          {/* Kun admin: sygemelding/raskmelding (vises når callbacks er givet) */}
+          {erLaerer && !erFravaerende && onSygemelding && (
             <HandlingsKnap
               label="Registrer fravær"
               beskrivelse="Sygemelding eller kursus"
@@ -90,9 +95,7 @@ export default function PersonModal({
               variant="danger"
             />
           )}
-
-          {/* Lærer: raskmelding */}
-          {erLaerer && erFravaerende && (
+          {erLaerer && erFravaerende && onRaskmelding && (
             <HandlingsKnap
               label="Raskmelding"
               beskrivelse="Marker læreren som aktiv igen"
@@ -100,8 +103,6 @@ export default function PersonModal({
               variant="success"
             />
           )}
-
-          {/* Vikarer: ingen ekstra knapper */}
         </div>
       </div>
     </div>

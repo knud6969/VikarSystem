@@ -674,6 +674,7 @@ export default function AdminKalenderPage() {
             person={livePerson}
             dagFravaer={dagFravaer}
             onLuk={lukPersonModal}
+            visPersonligMail={true}
             onSygemelding={() => aabneFromPersonSygemelding(livePerson)}
             onRaskmelding={() => aabneFromPersonRaskmelding(livePerson)}
             onUgeoversigt={() => aabneUgeoversigt(livePerson)}

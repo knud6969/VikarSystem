@@ -49,8 +49,6 @@ export default function PersonKontaktModal({ person, onLuk }) {
 
         <div className="px-6 py-4 space-y-3">
           <MailRække label="Arbejdsmail" email={person.email} />
-          <MailRække label="Personlig mail" email={person.personalEmail} />
-
           <TelefonRække telefon={person.telefon} />
         </div>
       </div>

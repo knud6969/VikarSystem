@@ -36,7 +36,7 @@ export default function VikarLektionerPage() {
   const [filter, setFilter] = useState('mine');
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const autoAabnetRef = useRef(false);
+  const autoAabnetRef = useRef(null); // gemmer sidst behandlede lessonId
 
   const yScrollRef = useRef(null);
   const timeColRef = useRef(null);
@@ -58,10 +58,11 @@ export default function VikarLektionerPage() {
   // Auto-åbn lektion fra notifikations-link (?lessonId=X&besked=1)
   useEffect(() => {
     const lessonId = searchParams.get('lessonId');
-    if (!lessonId || autoAabnetRef.current || !mineLektioner.length) return;
+    if (!lessonId || autoAabnetRef.current === lessonId || !mineLektioner.length) return;
     const lektion = mineLektioner.find(l => String(l.id) === String(lessonId));
     if (!lektion) return;
-    autoAabnetRef.current = true;
+    autoAabnetRef.current = lessonId;
+    setFilter('mine');
     setMandag(getMandagForUge(new Date(lektion.start_time)));
     if (searchParams.get('besked') === '1') {
       setBeskedLektion(lektion);

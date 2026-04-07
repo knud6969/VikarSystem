@@ -14,6 +14,7 @@ import BeskedModal from '../beskeder/BeskedModal';
 import LoadingSpinner from '../common/LoadingSpinner';
 import KontaktTooltip from '../common/KontaktTooltip';
 import PersonKontaktModal from '../common/PersonKontaktModal';
+import PersonModal from './PersonModal';
 import {
   getMandagForUge, getUgedage, getUgenummer,
   beregnPosition, dagTilStreng, formatDagLabel,
@@ -179,9 +180,8 @@ export default function DagOversigt({ filter }) {
     });
   })();
 
-  const erStretch  = true;
   const colW       = erUgeMode ? UGE_COL_W : COL_W;
-  const totalGridW = erStretch ? '100%' : Math.max(gitterKolonner.length * colW, 200);
+  const totalGridW = `max(${gitterKolonner.length * colW}px, 100%)`;
 
   if (loading) return <LoadingSpinner tekst="Henter kalender…" />;
 
@@ -194,47 +194,37 @@ export default function DagOversigt({ filter }) {
         {/* Venstre: navigation */}
         <div className="flex items-center gap-2">
           {erUgeMode ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setUgePerson(null); setUgeKlasse(null); setValgtLektion(null); }}
-                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-1"
-              >
-                ‹ Tilbage
-              </button>
-              {erPersonUge && (
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${ugePerson.farve}`}>
-                  {getInitialer(ugePerson.name)}
-                </div>
-              )}
-              <span className="text-sm font-semibold text-slate-800">
-                {erPersonUge ? ugePerson.name : ugeKlasse.name}
-              </span>
-              <span className="text-xs text-slate-400">— Uge {ugeNr}</span>
-            </div>
+            <button
+              onClick={() => { setUgePerson(null); setUgeKlasse(null); setValgtLektion(null); }}
+              className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              ‹ Tilbage
+            </button>
           ) : (
-            <>
-              <button
-                onClick={() => { setMandag(getMandagForUge()); setValgtDagIdx(Math.max(0, new Date().getDay() - 1)); }}
-                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                I dag
-              </button>
-              <div className="flex border border-slate-200 rounded-lg overflow-hidden">
-                <button onClick={() => gaaTilUge(-1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹</button>
-                <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
-              </div>
-              <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
-            </>
+            <button
+              onClick={() => { setMandag(getMandagForUge()); setValgtDagIdx(Math.max(0, new Date().getDay() - 1)); }}
+              className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              I dag
+            </button>
           )}
+          <div className="flex border border-slate-200 rounded-lg overflow-hidden">
+            <button onClick={() => gaaTilUge(-1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹</button>
+            <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
+          </div>
+          {erUgeMode && erPersonUge && (
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${ugePerson.farve}`}>
+              {getInitialer(ugePerson.name)}
+            </div>
+          )}
+          <span className="text-sm font-semibold text-slate-800">
+            {erUgeMode ? (erPersonUge ? ugePerson.name : ugeKlasse.name) : `Uge ${ugeNr}`}
+          </span>
+          {erUgeMode && <span className="text-sm font-semibold text-slate-800">— Uge {ugeNr}</span>}
         </div>
 
-        {/* Midten: dag-tabs (kun i dag-tilstand) eller uge-nav (kun i uge-tilstand) */}
-        {erUgeMode ? (
-          <div className="flex border border-slate-200 rounded-lg overflow-hidden">
-            <button onClick={() => gaaTilUge(-1)} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹ Forrige uge</button>
-            <button onClick={() => gaaTilUge(1)}  className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50">Næste uge ›</button>
-          </div>
-        ) : (
+        {/* Midten: dag-tabs (kun i dag-tilstand) */}
+        {!erUgeMode && (
           <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
             {ugedage.map((dag, i) => (
               <button
@@ -367,7 +357,6 @@ export default function DagOversigt({ filter }) {
                 <GitterKolonne
                   key={key}
                   colW={colW}
-                  erUgeMode={erStretch}
                   lektioner={kolonneLektioner}
                   tildelinger={tildelinger}
                   valgtLektionId={valgtLektion?.id}
@@ -392,44 +381,14 @@ export default function DagOversigt({ filter }) {
         )}
       </div>
 
-      {/* SimplePersonModal */}
       {aktivPersonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" onClick={() => setAktivPersonModal(null)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden border border-slate-100">
-            <div className="px-6 pt-6 pb-4 flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-base font-bold shrink-0 ${aktivPersonModal.farve}`}>
-                {getInitialer(aktivPersonModal.name)}
-              </div>
-              <div className="flex-1 min-w-0 pt-0.5">
-                <h2 className="text-base font-semibold text-slate-900 leading-tight truncate">{aktivPersonModal.name}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {aktivPersonModal.type === 'vikar' ? 'Vikar' : aktivPersonModal.dbType === 'paedagog' ? 'Pædagog' : 'Lærer'}
-                </p>
-                {aktivPersonModal.email && (
-                  <p className="text-xs text-slate-500 mt-1 truncate">{aktivPersonModal.email}</p>
-                )}
-                {aktivPersonModal.phone && (
-                  <p className="text-xs text-slate-500">{aktivPersonModal.phone}</p>
-                )}
-              </div>
-              <button onClick={() => setAktivPersonModal(null)} className="text-slate-300 hover:text-slate-500 text-xl leading-none mt-0.5 shrink-0">×</button>
-            </div>
-            <div className="h-px bg-slate-100 mx-6" />
-            <div className="px-4 py-4">
-              <button
-                onClick={() => { setUgePerson(aktivPersonModal); setAktivPersonModal(null); setValgtLektion(null); }}
-                className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-medium leading-tight">Vis ugeoversigt</p>
-                  <p className="text-xs opacity-60 mt-0.5">Se hele ugen for denne person</p>
-                </div>
-                <span className="ml-auto text-xs opacity-30">›</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <PersonModal
+          person={aktivPersonModal}
+          dagFravaer={[]}
+          onLuk={() => setAktivPersonModal(null)}
+          onUgeoversigt={() => { setUgePerson(aktivPersonModal); setAktivPersonModal(null); setValgtLektion(null); }}
+          visPersonligMail={bruger?.rolle === 'admin'}
+        />
       )}
 
       {/* BeskedModal */}
@@ -440,11 +399,11 @@ export default function DagOversigt({ filter }) {
   );
 }
 
-function GitterKolonne({ colW, erUgeMode, lektioner, tildelinger, valgtLektionId, onLektionKlik }) {
+function GitterKolonne({ colW, lektioner, tildelinger, valgtLektionId, onLektionKlik }) {
   return (
     <div
       className="relative border-r border-slate-200 last:border-r-0"
-      style={erUgeMode ? { flex: 1, minWidth: colW, height: TIMER.length * TIME_PX } : { width: colW, height: TIMER.length * TIME_PX }}
+      style={{ flex: 1, minWidth: colW, height: TIMER.length * TIME_PX }}
     >
       {TIMER.map(t => (
         <div key={t} className="absolute w-full border-b border-slate-100"

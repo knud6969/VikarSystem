@@ -65,13 +65,19 @@ const LaererModel = {
   async getLektioner(laererId) {
     const result = await pool.query(`
       SELECT l.*,
+             la.name AS laerer_navn, la.type AS laerer_type, la.phone AS laerer_phone,
+             br_la.email AS laerer_email, br_la.personal_email AS laerer_personal_email,
              k.name AS klasse_navn,
-             v.name AS vikar_navn,
+             v.name AS vikar_navn, v.phone AS vikar_phone,
+             bv.email AS vikar_email, bv.personal_email AS vikar_personal_email,
              ti.id  AS tildeling_id
       FROM lektioner l
       JOIN klasser k ON k.id = l.class_id
+      JOIN laerere la ON la.id = l.teacher_id
+      LEFT JOIN brugere br_la ON br_la.id = la.user_id
       LEFT JOIN tildelinger ti ON ti.lesson_id = l.id
       LEFT JOIN vikarer v      ON v.id = ti.substitute_id
+      LEFT JOIN brugere bv     ON bv.id = v.user_id
       WHERE l.teacher_id = $1
       ORDER BY l.start_time
     `, [laererId]);
