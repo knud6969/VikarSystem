@@ -212,15 +212,19 @@ export default function DagOversigt({ filter }) {
             <button onClick={() => gaaTilUge(-1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹</button>
             <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
           </div>
-          {erUgeMode && erPersonUge && (
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${ugePerson.farve}`}>
-              {getInitialer(ugePerson.name)}
-            </div>
+          <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
+          {erUgeMode && (
+            <>
+              {erPersonUge && (
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${ugePerson.farve}`}>
+                  {getInitialer(ugePerson.name)}
+                </div>
+              )}
+              <span className="text-sm font-semibold text-slate-800">
+                {erPersonUge ? ugePerson.name : ugeKlasse.name}
+              </span>
+            </>
           )}
-          <span className="text-sm font-semibold text-slate-800">
-            {erUgeMode ? (erPersonUge ? ugePerson.name : ugeKlasse.name) : `Uge ${ugeNr}`}
-          </span>
-          {erUgeMode && <span className="text-sm font-semibold text-slate-800">— Uge {ugeNr}</span>}
         </div>
 
         {/* Midten: dag-tabs (kun i dag-tilstand) */}

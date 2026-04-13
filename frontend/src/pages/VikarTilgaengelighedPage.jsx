@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { vikarService } from '../api/vikarService';
 import { tilgaengelighedService } from '../api/tilgaengelighedService';
+import { lektionService } from '../api/lektionService';
 import { useApi } from '../hooks/useApi';
 import {
   getMandagForUge, getUgedage, getUgenummer, dagTilStreng,
@@ -51,6 +52,10 @@ export default function VikarTilgaengelighedPage() {
     () => tilgaengelighedService.getMin(),
     [vikar?.id]
   );
+  const { data: mineLektioner } = useApi(
+    () => vikar ? lektionService.getForVikar(vikar.id) : Promise.resolve([]),
+    [vikar?.id]
+  );
 
   const ugedage = getUgedage(mandag);
   const ugeNr   = getUgenummer(mandag);
@@ -68,7 +73,7 @@ export default function VikarTilgaengelighedPage() {
   ];
 
   // Keep stateRef current so keyboard handler never closes over stale values
-  stateRef.current = { aktivId, clipboard, hoverDagIdx, alleBlokke, ugedage };
+  stateRef.current = { aktivId, clipboard, hoverDagIdx, alleBlokke, ugedage, mineLektioner };
 
   useEffect(() => {
     if (!loading && yScrollRef.current)
@@ -106,7 +111,15 @@ export default function VikarTilgaengelighedPage() {
             const bE = strToMin(b.end_time.slice(0, 5));
             return cS < bE && cE > bS;
           });
-        if (overlap) return;
+        const lektionOverlap = (mineLektioner || [])
+          .filter(l => dagTilStreng(new Date(l.start_time)) === dato)
+          .some(l => {
+            const s = new Date(l.start_time); const e2 = new Date(l.end_time);
+            const lS = s.getHours() * 60 + s.getMinutes();
+            const lE = e2.getHours() * 60 + e2.getMinutes();
+            return cS < lE && cE > lS;
+          });
+        if (overlap || lektionOverlap) return;
 
         const nyBlok = {
           id: uid(),
@@ -138,6 +151,20 @@ export default function VikarTilgaengelighedPage() {
 
   function blokkeForDag(dagStr) {
     return alleBlokke.filter(b => b.date === dagStr);
+  }
+
+  function lektionerForDag(dagStr) {
+    return (mineLektioner || []).filter(l => dagTilStreng(new Date(l.start_time)) === dagStr);
+  }
+
+  function harLektionOverlap(dagStr, startMin, slutMin) {
+    return lektionerForDag(dagStr).some(l => {
+      const s = new Date(l.start_time);
+      const e = new Date(l.end_time);
+      const lS = s.getHours() * 60 + s.getMinutes();
+      const lE = e.getHours() * 60 + e.getMinutes();
+      return startMin < lE && slutMin > lS;
+    });
   }
 
   // ── Opret ny blok ──────────────────────────────────────────
@@ -197,6 +224,7 @@ export default function VikarTilgaengelighedPage() {
     const nyStart = modalStartTime;
     const nySlut  = modalEndTime;
     if (strToMin(nyStart) >= strToMin(nySlut)) return; // invalid range
+    if (harLektionOverlap(blok.date, strToMin(nyStart), strToMin(nySlut))) return;
 
     setGemLoading(true);
     setAktivId(null);
@@ -231,7 +259,7 @@ export default function VikarTilgaengelighedPage() {
       const bE = strToMin(b.end_time.slice(0, 5));
       return startMin < bE && slutMin > bS;
     });
-    if (harOverlap) return;
+    if (harOverlap || harLektionOverlap(dato, startMin, slutMin)) return;
 
     const nyBlok = {
       id: uid(),
@@ -343,7 +371,7 @@ export default function VikarTilgaengelighedPage() {
             const bE = strToMin(b.end_time.slice(0, 5));
             return curStart < bE && curSlut > bS;
           });
-        if (harOverlap) { refetch(); return; }
+        if (harOverlap || harLektionOverlap(nyDate, curStart, curSlut)) { refetch(); return; }
         flyt(blok, minToStr(curStart), minToStr(curSlut), nyDate);
       } else {
         // Click without drag → open modal
@@ -456,6 +484,29 @@ export default function VikarTilgaengelighedPage() {
                       <div key={`h${t}`} className="absolute w-full border-b border-slate-50"
                         style={{ top: (t - TIMER_START) * TIME_PX + TIME_PX / 2 }} />
                     ))}
+
+                    {lektionerForDag(dagStr).map(l => {
+                      const s = new Date(l.start_time);
+                      const e = new Date(l.end_time);
+                      const sMin = s.getHours() * 60 + s.getMinutes();
+                      const eMin = e.getHours() * 60 + e.getMinutes();
+                      const top    = minToY(sMin);
+                      const height = Math.max(minToY(eMin) - top, 24);
+                      return (
+                        <div key={l.id}
+                          className="absolute left-1 right-1 rounded-lg overflow-hidden pointer-events-none z-10"
+                          style={{ top: top + 1, height: height - 2, backgroundColor: 'rgba(59,130,246,0.08)', border: '1.5px solid #BFDBFE' }}>
+                          <div className="px-2 pt-1">
+                            <p className="text-xs font-semibold text-blue-600 leading-tight truncate">{l.subject}</p>
+                            {height > 32 && (
+                              <p className="text-xs text-blue-400">
+                                {s.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}–{e.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
 
                     {dagBlokke.map(blok => {
                       const sMin   = strToMin(blok.start_time.slice(0, 5));

@@ -133,6 +133,14 @@ export default function VikarLektionerPage() {
                 <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
               </div>
               <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
+              {vikar?.name && (
+                <>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold bg-emerald-500">
+                    {vikar.name.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800">{vikar.name}</span>
+                </>
+              )}
             </div>
           ) : (
             <div />
@@ -304,7 +312,11 @@ function LektionDetalje({ lektion, harBeskeder, onLuk, onAabnBeskeder, visBesked
   return (
     <div>
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <span className="px-2.5 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+        <span className={`px-2.5 py-1 rounded text-xs font-semibold border ${
+          erForbi
+            ? 'bg-slate-100 text-slate-500 border-slate-200'
+            : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+        }`}>
           {erForbi ? 'Afholdt' : 'Tildelt'}
         </span>
         <button onClick={onLuk} className="text-slate-300 hover:text-slate-500 text-xl leading-none">×</button>

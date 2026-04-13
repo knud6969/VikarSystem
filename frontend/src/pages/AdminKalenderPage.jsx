@@ -32,6 +32,7 @@ const COL_W         = 140;
 const UGEOVERSIGT_COL_W = 200; // bredere kolonner i ugeoversigt
 const TIME_COL_W    = 48;
 const HEADER_H      = 72;
+const HEADER_H_PERSON = 88;
 const ARBEJDS_START = 7;
 const TIMER         = Array.from({ length: TIMER_SLUT - TIMER_START }, (_, i) => TIMER_START + i);
 
@@ -165,6 +166,7 @@ export default function AdminKalenderPage() {
 
   const colW       = erUgeOversigt ? UGEOVERSIGT_COL_W : COL_W;
   const totalGridW = erUgeOversigt ? '100%' : gitterKolonner.length * colW;
+  const aktuelHeaderH = erUgeOversigt ? HEADER_H_PERSON : HEADER_H;
 
   // Fravær for valgt dag (normal) eller alle dage (ugeoversigt håndteres per kolonne)
   const valgtDagStr = ugedage[valgtDagIdx] ? dagTilStreng(ugedage[valgtDagIdx]) : null;
@@ -368,37 +370,31 @@ export default function AdminKalenderPage() {
           {/* Venstre: uge-navigation */}
           <div className="flex items-center gap-2">
             {erUgeOversigt ? (
-              /* Ugeoversigt: vis person-navn + tilbage-knap */
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={lukUgeoversigt}
-                  className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-1"
-                >
-                  ‹ Tilbage
-                </button>
+              <button
+                onClick={lukUgeoversigt}
+                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                ‹ Tilbage
+              </button>
+            ) : (
+              <button
+                onClick={() => { setMandag(getMandagForUge()); setValgtDagIdx(Math.max(0, new Date().getDay() - 1)); }}
+                className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                I dag
+              </button>
+            )}
+            <div className="flex border border-slate-200 rounded-lg overflow-hidden">
+              <button onClick={() => gaaTilUge(-1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹</button>
+              <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
+            </div>
+            <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
+            {erUgeOversigt && (
+              <>
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${ugePerson.farve}`}>
                   {getInitialer(ugePerson.name)}
                 </div>
                 <span className="text-sm font-semibold text-slate-800">{ugePerson.name}</span>
-                <span className="text-xs text-slate-400">— Uge {ugeNr}</span>
-              </div>
-            ) : (
-              /* Normal: I dag + uge-navigation */
-              <>
-                <button
-                  onClick={() => {
-                    setMandag(getMandagForUge());
-                    setValgtDagIdx(Math.max(0, new Date().getDay() - 1));
-                  }}
-                  className="px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  I dag
-                </button>
-                <div className="flex border border-slate-200 rounded-lg overflow-hidden">
-                  <button onClick={() => gaaTilUge(-1)} className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹</button>
-                  <button onClick={() => gaaTilUge(1)}  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50">›</button>
-                </div>
-                <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
               </>
             )}
           </div>
@@ -422,14 +418,6 @@ export default function AdminKalenderPage() {
                   </span>
                 </button>
               ))}
-            </div>
-          )}
-
-          {/* I ugeoversigt: uge-navigation i midten */}
-          {erUgeOversigt && (
-            <div className="flex border border-slate-200 rounded-lg overflow-hidden">
-              <button onClick={() => gaaTilUge(-1)} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-50 border-r border-slate-200">‹ Forrige uge</button>
-              <button onClick={() => gaaTilUge(1)}  className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-50">Næste uge ›</button>
             </div>
           )}
 
@@ -472,7 +460,7 @@ export default function AdminKalenderPage() {
 
           {/* Tidssøjle */}
           <div style={{ width: TIME_COL_W, minWidth: TIME_COL_W }} className="shrink-0 border-r border-slate-200 flex flex-col bg-white z-10">
-            <div style={{ height: HEADER_H }} className="shrink-0 border-b border-slate-200" />
+            <div style={{ height: aktuelHeaderH }} className="shrink-0 border-b border-slate-200" />
             <div ref={timeColRef} className="flex-1 overflow-hidden">
               <div style={{ height: TIMER.length * TIME_PX }}>
                 {TIMER.map(t => (
@@ -494,7 +482,7 @@ export default function AdminKalenderPage() {
             {/* ── Header ──────────────────────────────────── */}
             <div
               className="flex shrink-0 border-b border-slate-200 bg-white sticky top-0 z-20"
-              style={{ width: totalGridW, height: HEADER_H }}
+              style={{ width: totalGridW, height: aktuelHeaderH }}
             >
               {erUgeOversigt
                 /* Ugeoversigt: dag-kolonner */
@@ -502,24 +490,35 @@ export default function AdminKalenderPage() {
                     const dagStr = dagTilStreng(dag);
                     const erIdag = dagStr === idagStr;
                     const dagFravaerUge = ugePerson.type === 'laerer' ? fravaer.filter(f => String(f.start_date).slice(0,10) <= dagStr && String(f.end_date).slice(0,10) >= dagStr && Number(f.teacher_id) === Number(ugePerson.id)) : [];
+                    const antalDag = lektioner.filter(l =>
+                      dagTilStreng(new Date(l.start_time)) === dagStr &&
+                      (ugePerson.type === 'laerer'
+                        ? l.teacher_id === ugePerson.id
+                        : tildelinger.some(t => t.lesson_id === l.id && t.substitute_id === ugePerson.id))
+                    ).length;
 
                     return (
                       <div
                         key={i}
                         style={{ flex: 1, minWidth: colW }}
-                        className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0"
+                        className="flex flex-col items-center justify-center border-r border-slate-200 last:border-r-0 py-2"
                       >
                         <p className={`text-xs font-semibold ${erIdag ? 'text-blue-600' : 'text-slate-500'}`}>
-                          {DAGE[i].slice(0, 3)}
+                          {DAGE[i]}
                         </p>
-                        <p className={`text-lg font-bold leading-tight ${erIdag ? 'text-blue-600' : 'text-slate-800'}`}>
+                        <p className={`text-2xl font-bold leading-tight ${erIdag ? 'text-blue-600' : 'text-slate-800'}`}>
                           {dag.getDate()}
                         </p>
-                        <p className="text-xs text-slate-400">
-                          {dag.toLocaleDateString('da-DK', { month: 'short' })}
+                        <p className="text-xs text-slate-400 capitalize mb-1">
+                          {dag.toLocaleDateString('da-DK', { month: 'long' })}
                         </p>
                         {dagFravaerUge.length > 0 && (
-                          <span className="mt-0.5 text-xs text-red-500">fraværende</span>
+                          <span className="text-xs text-red-500">fraværende</span>
+                        )}
+                        {antalDag > 0 && dagFravaerUge.length === 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 font-medium">
+                            {antalDag} lektion{antalDag !== 1 ? 'er' : ''}
+                          </span>
                         )}
                       </div>
                     );
@@ -599,6 +598,8 @@ export default function AdminKalenderPage() {
                             ? tilgaengelighed.filter(t => Number(t.substitute_id) === Number(ugePerson.id) && t.date === dagStr)
                             : []}
                           onLektionKlik={(l) => aabneLektion(l, tildelinger.find(t => t.lesson_id === l.id))}
+                          erPersonVisning={true}
+                          valgtLektionId={valgtLektion?.id}
                         />
                       );
                     })
@@ -747,7 +748,7 @@ export default function AdminKalenderPage() {
 /* ────────────────────────────────────────────────────────────
  * GitterKolonne — én tidssøjle-kolonne i gitteret
  * ──────────────────────────────────────────────────────────── */
-function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lektionerMedBeskeder = [], dagOptaget = [], onLektionKlik }) {
+function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lektionerMedBeskeder = [], dagOptaget = [], onLektionKlik, erPersonVisning = false, valgtLektionId }) {
   return (
     <div
       className={`relative border-r border-slate-200 last:border-r-0 ${erFravaer ? 'bg-red-50/30' : ''}`}
@@ -793,10 +794,54 @@ function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lekti
       {/* Lektioner */}
       {lektioner.map(lektion => {
         const { top, height } = beregnPosition(lektion.start_time, lektion.end_time, TIME_PX);
-        const farve           = statusFarve(lektion.status);
-        const tildeling       = tildelinger.find(t => t.lesson_id === lektion.id);
-        const harBeskeder     = lektionerMedBeskeder.includes(lektion.id);
+        const tildeling   = tildelinger.find(t => t.lesson_id === lektion.id);
+        const harBeskeder = lektionerMedBeskeder.includes(lektion.id);
+        const erValgt     = valgtLektionId === lektion.id;
+        const erFortid    = new Date(lektion.end_time) < new Date();
 
+        if (erPersonVisning) {
+          return (
+            <button
+              key={lektion.id}
+              onClick={() => onLektionKlik(lektion)}
+              className={`absolute left-1 right-1 rounded-lg px-2 py-1.5 text-left transition-all hover:shadow-md z-10 overflow-hidden ${erFortid ? 'opacity-50' : ''}`}
+              style={{
+                top: top + 1,
+                height: height - 2,
+                backgroundColor: '#F0FDF4',
+                border: `1.5px solid ${erValgt ? '#16A34A' : '#BBF7D0'}`,
+                boxShadow: erValgt ? '0 0 0 2px #86EFAC' : undefined,
+              }}
+            >
+              {harBeskeder && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
+              <div className="flex items-center justify-between gap-1 pr-3">
+                <p className="font-semibold text-xs leading-tight truncate text-emerald-800">
+                  {lektion.subject}
+                </p>
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/60 font-bold shrink-0 text-emerald-700"
+                  style={{ fontSize: '9px' }}
+                  title={tildeling ? tildeling.vikar_navn : lektion.laerer_navn}
+                >
+                  {(tildeling ? tildeling.vikar_navn : lektion.laerer_navn)
+                    ?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
+                </span>
+              </div>
+              <p className="text-xs opacity-60 truncate text-emerald-700">{lektion.klasse_navn}</p>
+              {height > 44 && (
+                <p className="text-xs opacity-50 mt-0.5 text-emerald-600">
+                  {new Date(lektion.start_time).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                  {' – '}
+                  {new Date(lektion.end_time).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </button>
+          );
+        }
+
+        const farve = statusFarve(lektion.status);
         return (
           <button
             key={lektion.id}
@@ -812,7 +857,6 @@ function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lekti
             {harBeskeder && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
             )}
-            {/* Fag + initialer på samme linje */}
             <div className="flex items-center justify-between gap-1">
               <p className="font-semibold text-xs leading-tight truncate" style={{ color: farve.text }}>
                 {lektion.subject}
@@ -822,10 +866,8 @@ function GitterKolonne({ colW, stretch, lektioner, tildelinger, erFravaer, lekti
                 style={{ color: farve.text, fontSize: '9px' }}
                 title={tildeling ? tildeling.vikar_navn : lektion.laerer_navn}
               >
-                {tildeling
-                  ? tildeling.vikar_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
-                  : lektion.laerer_navn?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)
-                }
+                {(tildeling ? tildeling.vikar_navn : lektion.laerer_navn)
+                  ?.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
               </span>
             </div>
             <p className="text-xs opacity-60 truncate" style={{ color: farve.text }}>

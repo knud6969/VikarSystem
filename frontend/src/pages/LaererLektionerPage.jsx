@@ -133,10 +133,12 @@ export default function LaererLektionerPage() {
               </div>
               <span className="text-sm font-semibold text-slate-800">Uge {ugeNr}</span>
               {laerer?.name && (
-                <span className="text-xs text-slate-400 ml-1">
-                  <span className="font-medium text-slate-700">{laerer.name}</span>
-                  {' · '}{mineLektioner.length} lektioner i alt
-                </span>
+                <>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold bg-blue-500">
+                    {laerer.name.split(' ').map(d => d[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                  <span className="text-sm font-semibold text-slate-800">{laerer.name}</span>
+                </>
               )}
             </div>
           ) : (
