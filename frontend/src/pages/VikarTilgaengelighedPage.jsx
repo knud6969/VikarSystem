@@ -10,7 +10,7 @@ import {
 } from '../utils/kalenderUtils';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
-const TIME_PX    = 64;
+const TIME_PX    = 48;
 const TIME_COL_W = 48;
 const HEADER_H   = 88;
 const SNAP       = 15;
@@ -23,6 +23,45 @@ function strToMin(s)      { const [h, m] = s.split(':').map(Number); return h * 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function yToMin(y)        { return snap(clamp((y / TIME_PX) * 60 + TIMER_START * 60, TIMER_START * 60, TIMER_SLUT * 60)); }
 function minToY(min)      { return ((min - TIMER_START * 60) / 60) * TIME_PX; }
+
+/**
+ * Beregner kolonne-placering for overlappende lektioner.
+ * Returnerer { [id]: { col, totalCols } }
+ */
+function beregnOverlapKolonner(lektioner) {
+  const sorted = [...lektioner].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  const kolonner = []; // array af arrays, én per kolonne
+  const info = {};
+
+  for (const l of sorted) {
+    const sMin = new Date(l.start_time).getHours() * 60 + new Date(l.start_time).getMinutes();
+    const eMin = new Date(l.end_time).getHours() * 60 + new Date(l.end_time).getMinutes();
+    let placeret = false;
+    for (let c = 0; c < kolonner.length; c++) {
+      const overlapper = kolonner[c].some(o => {
+        const oS = new Date(o.start_time).getHours() * 60 + new Date(o.start_time).getMinutes();
+        const oE = new Date(o.end_time).getHours() * 60 + new Date(o.end_time).getMinutes();
+        return sMin < oE && eMin > oS;
+      });
+      if (!overlapper) { kolonner[c].push(l); info[l.id] = { col: c }; placeret = true; break; }
+    }
+    if (!placeret) { kolonner.push([l]); info[l.id] = { col: kolonner.length - 1 }; }
+  }
+
+  // Find det maksimale antal samtidige kolonner for hvert element
+  for (const l of sorted) {
+    const sMin = new Date(l.start_time).getHours() * 60 + new Date(l.start_time).getMinutes();
+    const eMin = new Date(l.end_time).getHours() * 60 + new Date(l.end_time).getMinutes();
+    let maxKol = 0;
+    for (const o of sorted) {
+      const oS = new Date(o.start_time).getHours() * 60 + new Date(o.start_time).getMinutes();
+      const oE = new Date(o.end_time).getHours() * 60 + new Date(o.end_time).getMinutes();
+      if (sMin < oE && eMin > oS) maxKol = Math.max(maxKol, info[o.id].col);
+    }
+    info[l.id].totalCols = maxKol + 1;
+  }
+  return info;
+}
 
 let _uid = 0;
 function uid() { return `local-${++_uid}`; }
@@ -485,28 +524,44 @@ export default function VikarTilgaengelighedPage() {
                         style={{ top: (t - TIMER_START) * TIME_PX + TIME_PX / 2 }} />
                     ))}
 
-                    {lektionerForDag(dagStr).map(l => {
-                      const s = new Date(l.start_time);
-                      const e = new Date(l.end_time);
-                      const sMin = s.getHours() * 60 + s.getMinutes();
-                      const eMin = e.getHours() * 60 + e.getMinutes();
-                      const top    = minToY(sMin);
-                      const height = Math.max(minToY(eMin) - top, 24);
-                      return (
-                        <div key={l.id}
-                          className="absolute left-1 right-1 rounded-lg overflow-hidden pointer-events-none z-10"
-                          style={{ top: top + 1, height: height - 2, backgroundColor: 'rgba(59,130,246,0.08)', border: '1.5px solid #BFDBFE' }}>
-                          <div className="px-2 pt-1">
-                            <p className="text-xs font-semibold text-blue-600 leading-tight truncate">{l.subject}</p>
-                            {height > 32 && (
-                              <p className="text-xs text-blue-400">
-                                {s.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}–{e.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            )}
+                    {(() => {
+                      const dagLektioner = lektionerForDag(dagStr);
+                      const overlapInfo  = beregnOverlapKolonner(dagLektioner);
+                      return dagLektioner.map(l => {
+                        const s = new Date(l.start_time);
+                        const e = new Date(l.end_time);
+                        const sMin = s.getHours() * 60 + s.getMinutes();
+                        const eMin = e.getHours() * 60 + e.getMinutes();
+                        const top    = minToY(sMin);
+                        const height = Math.max(minToY(eMin) - top, 24);
+                        const { col = 0, totalCols = 1 } = overlapInfo[l.id] || {};
+                        const kolW   = 100 / totalCols;
+                        const leftPct  = kolW * col;
+                        // Lille margin (2px) mellem kolonner og fra kanter
+                        const marginPx = 2;
+                        return (
+                          <div key={l.id}
+                            className="absolute rounded-lg overflow-hidden pointer-events-none z-10"
+                            style={{
+                              top: top + 1,
+                              height: height - 2,
+                              left:  `calc(${leftPct}% + ${marginPx}px)`,
+                              width: `calc(${kolW}% - ${marginPx * (totalCols > 1 ? 1.5 : 2)}px)`,
+                              backgroundColor: 'rgba(59,130,246,0.08)',
+                              border: '1.5px solid #BFDBFE',
+                            }}>
+                            <div className="px-1.5 pt-0.5">
+                              <p className="text-xs font-semibold text-blue-600 leading-tight truncate">{l.subject}</p>
+                              {height > 26 && (
+                                <p className="text-xs text-blue-400 leading-tight">
+                                  {s.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}–{e.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
 
                     {dagBlokke.map(blok => {
                       const sMin   = strToMin(blok.start_time.slice(0, 5));
@@ -669,13 +724,13 @@ function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMou
       onMouseLeave={() => setCursor('grab')}
       onMouseDown={handleMouseDown}
     >
-      <div className="px-2 pt-1 pb-2 pointer-events-none">
+      <div className="px-1.5 pt-0.5 pb-1 pointer-events-none">
         <p className="text-xs font-semibold text-red-600 leading-tight">Utilgængelig</p>
-        {height > 32 && (
-          <p className="text-xs text-red-400">{minToStr(sMin)} – {minToStr(eMin)}</p>
+        {height > 26 && (
+          <p className="text-xs text-red-400 leading-tight">{minToStr(sMin)} – {minToStr(eMin)}</p>
         )}
-        {height > 48 && blok.kommentar && (
-          <p className="text-xs text-red-400 italic truncate">{blok.kommentar}</p>
+        {height > 38 && blok.kommentar && (
+          <p className="text-xs text-red-400 italic truncate leading-tight">{blok.kommentar}</p>
         )}
       </div>
 
