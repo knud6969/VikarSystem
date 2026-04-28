@@ -78,6 +78,9 @@ export default function VikarTilgaengelighedPage() {
   const [clipboard, setClipboard]         = useState(null);
   const [hoverDagIdx, setHoverDagIdx]     = useState(null);
   const [draggingBlokId, setDraggingBlokId] = useState(null);
+  const [gentagUger, setGentagUger]         = useState(0);
+
+  const clickTimer = useRef(null);
 
   const yScrollRef = useRef(null);
   const timeColRef = useRef(null);
@@ -278,6 +281,18 @@ export default function VikarTilgaengelighedPage() {
         status:     'optaget',
         kommentar:  kommentar || null,
       });
+      // Ugentlige gentagelser
+      for (let w = 1; w <= gentagUger; w++) {
+        const d = new Date(blok.date);
+        d.setDate(d.getDate() + w * 7);
+        await tilgaengelighedService.saet({
+          date:       dagTilStreng(d),
+          start_time: nyStart,
+          end_time:   nySlut,
+          status:     'optaget',
+          kommentar:  kommentar || null,
+        });
+      }
       await refetch();
     } catch (err) {
       console.error(err);
@@ -413,20 +428,32 @@ export default function VikarTilgaengelighedPage() {
         if (harOverlap || harLektionOverlap(nyDate, curStart, curSlut)) { refetch(); return; }
         flyt(blok, minToStr(curStart), minToStr(curSlut), nyDate);
       } else {
-        // Click without drag → open modal
+        // Click without drag → open modal (200ms delay so dobbeltklik kan aflyse)
+        clearTimeout(clickTimer.current);
         if (aktivId === blok.id) {
-          setAktivId(null);
+          clickTimer.current = setTimeout(() => setAktivId(null), 200);
         } else {
-          setAktivId(blok.id);
-          setKommentar(blok.kommentar || '');
-          setModalStartTime(blok.start_time.slice(0, 5));
-          setModalEndTime(blok.end_time.slice(0, 5));
+          clickTimer.current = setTimeout(() => {
+            setAktivId(blok.id);
+            setKommentar(blok.kommentar || '');
+            setModalStartTime(blok.start_time.slice(0, 5));
+            setModalEndTime(blok.end_time.slice(0, 5));
+            setGentagUger(0);
+          }, 200);
         }
       }
     }
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+  }
+
+  // ── Dobbeltklik på blok → kopiér direkte til clipboard ────
+  function handleBlokDblClick(e, blok) {
+    e.stopPropagation();
+    e.preventDefault();
+    clearTimeout(clickTimer.current);
+    setClipboard(blok);
   }
 
   if (loading) return <LoadingSpinner tekst="Henter tilgængelighed…" />;
@@ -580,6 +607,7 @@ export default function VikarTilgaengelighedPage() {
                           eMin={eMin}
                           handlePx={HANDLE_PX}
                           onMouseDown={e => handleBlokMouseDown(e, blok, i)}
+                          onDoubleClick={e => handleBlokDblClick(e, blok)}
                           onSlet={e => { e.stopPropagation(); slet(blok); }}
                         />
                       );
@@ -653,12 +681,39 @@ export default function VikarTilgaengelighedPage() {
                 />
               </div>
 
+              {/* Ugentlig gentagelse */}
+              <div>
+                <label className="block text-xs text-slate-500 mb-1">Gentag ugentligt</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={52}
+                    value={gentagUger}
+                    onChange={e => setGentagUger(Math.max(0, Math.min(52, parseInt(e.target.value) || 0)))}
+                    className="w-16 px-2 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 text-center"
+                  />
+                  <span className="text-xs text-slate-500">uger frem</span>
+                  {gentagUger > 0 && (
+                    <span className="text-xs text-slate-400">
+                      ({gentagUger} {gentagUger === 1 ? 'kopi' : 'kopier'} oprettes)
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <button
                   onClick={() => { slet(aktivBlok); setAktivId(null); }}
                   className="py-2 px-3 text-sm border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                 >
                   Slet
+                </button>
+                <button
+                  onClick={() => { setClipboard(aktivBlok); setAktivId(null); }}
+                  className="py-2 px-3 text-sm border border-blue-200 text-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  Kopier
                 </button>
                 <button onClick={() => setAktivId(null)}
                   className="flex-1 py-2 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
@@ -683,7 +738,7 @@ export default function VikarTilgaengelighedPage() {
 /**
  * BlokKomponent — én utilgængeligheds-blok i kalenderen.
  */
-function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMouseDown, onSlet }) {
+function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMouseDown, onDoubleClick, onSlet }) {
   const ref = React.useRef(null);
   const [cursor, setCursor] = React.useState('grab');
 
@@ -723,6 +778,7 @@ function BlokKomponent({ blok, top, height, erAktiv, sMin, eMin, handlePx, onMou
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setCursor('grab')}
       onMouseDown={handleMouseDown}
+      onDoubleClick={onDoubleClick}
     >
       <div className="px-1.5 pt-0.5 pb-1 pointer-events-none">
         <p className="text-xs font-semibold text-red-600 leading-tight">Utilgængelig</p>
