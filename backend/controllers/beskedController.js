@@ -75,6 +75,12 @@ const BeskedController = {
           const afsenderRolle = req.bruger.rolle;
           const dato        = new Date(l.start_time).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
 
+          const adminRes = await pool.query(
+            `SELECT id FROM brugere WHERE rolle = 'admin' AND id != $1`,
+            [req.bruger.id]
+          );
+          const adminIds = adminRes.rows.map(r => r.id);
+
           if (afsenderRolle === 'laerer' && l.vikar_bruger_id) {
             await NotifikationModel.opret({
               bruger_id: l.vikar_bruger_id,
@@ -83,6 +89,15 @@ const BeskedController = {
               besked: `${l.subject} – ${dato}`,
               link: `/vikar/lektioner?lessonId=${lessonId}&besked=1`,
             });
+            for (const adminId of adminIds) {
+              await NotifikationModel.opret({
+                bruger_id: adminId,
+                type: 'ny_besked',
+                titel: `Ny besked fra ${l.laerer_navn}`,
+                besked: `${l.subject} – ${dato}`,
+                link: `/admin/kalender?lessonId=${lessonId}&besked=1`,
+              });
+            }
           } else if (afsenderRolle === 'vikar') {
             await NotifikationModel.opret({
               bruger_id: l.laerer_bruger_id,
@@ -91,6 +106,34 @@ const BeskedController = {
               besked: `${l.subject} – ${dato}`,
               link: `/laerer/lektioner?lessonId=${lessonId}&besked=1`,
             });
+            for (const adminId of adminIds) {
+              await NotifikationModel.opret({
+                bruger_id: adminId,
+                type: 'ny_besked',
+                titel: `Ny besked fra ${l.vikar_navn ?? 'vikaren'}`,
+                besked: `${l.subject} – ${dato}`,
+                link: `/admin/kalender?lessonId=${lessonId}&besked=1`,
+              });
+            }
+          } else if (afsenderRolle === 'admin') {
+            // Notificer lærer
+            await NotifikationModel.opret({
+              bruger_id: l.laerer_bruger_id,
+              type: 'ny_besked',
+              titel: `Ny besked fra administrator`,
+              besked: `${l.subject} – ${dato}`,
+              link: `/laerer/lektioner?lessonId=${lessonId}&besked=1`,
+            });
+            // Notificer vikar hvis tildelt
+            if (l.vikar_bruger_id) {
+              await NotifikationModel.opret({
+                bruger_id: l.vikar_bruger_id,
+                type: 'ny_besked',
+                titel: `Ny besked fra administrator`,
+                besked: `${l.subject} – ${dato}`,
+                link: `/vikar/lektioner?lessonId=${lessonId}&besked=1`,
+              });
+            }
           }
         }
       } catch (notifErr) {

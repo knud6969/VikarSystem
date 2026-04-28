@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useKalender } from '../hooks/useKalender';
 import { laererService } from '../api/laererService';
 import { vikarService } from '../api/vikarService';
@@ -26,6 +27,7 @@ import RaskmeldingModal from '../components/kalender/RaskmeldingModal';
 import BeskedModal from '../components/beskeder/BeskedModal';
 import PersonKontaktModal from '../components/common/PersonKontaktModal';
 import { fetchLektionerMedBeskeder } from '../api/beskedFetch';
+import { lektionService } from '../api/lektionService';
 
 const TIME_PX       = 64;
 const COL_W         = 140;
@@ -58,6 +60,9 @@ const AVATAR_FARVER = [
  *   - Registrere fravær / Raskmelding (kun lærere)
  */
 export default function AdminKalenderPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoAabnetRef = useRef(false);
+
   const [mandag, setMandag]           = useState(() => getMandagForUge());
   const [valgtDagIdx, setValgtDagIdx] = useState(() => {
     const d = new Date().getDay();
@@ -104,6 +109,23 @@ export default function AdminKalenderPage() {
     if (!lektioner.length) return;
     fetchLektionerMedBeskeder(lektioner.map(l => l.id)).then(setLektionerMedBeskeder);
   }, [lektioner.length]);
+
+  // Auto-åbn beskedmodal fra notifikations-link (?lessonId=X&besked=1)
+  useEffect(() => {
+    const lessonId = searchParams.get('lessonId');
+    if (!lessonId || autoAabnetRef.current) return;
+    autoAabnetRef.current = true;
+    lektionService.getById(lessonId).then(lektion => {
+      if (!lektion) return;
+      setMandag(getMandagForUge(new Date(lektion.start_time)));
+      if (searchParams.get('besked') === '1') {
+        setBeskedLektion(lektion);
+      } else {
+        setValgtLektion(lektion);
+      }
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [searchParams]);
 
   const ugedage  = getUgedage(mandag);
   const ugeNr    = getUgenummer(mandag);
